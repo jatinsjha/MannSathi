@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f6f1">
+  <meta name="description" content="MannSathi — a supportive AI companion for students.">
+  <title>MannSathi — Your Student Well-being Companion</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/" aria-label="MannSathi home">
+        <span class="brand-mark" aria-hidden="true">✳</span>
+        <span>Mann<span class="brand-light">Sathi</span></span>
+      </a>
+
+      <button class="new-chat" id="new-chat" type="button">
+        <span>＋</span> New conversation
+      </button>
+
+      <div class="sidebar-note">
+        <span class="note-icon">✳</span>
+        <p>
+          <strong>A small reminder</strong><br>
+          You don't have to figure everything out today.
+          One step is enough.
+        </p>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="privacy-line">
+          <span class="status-dot"></span>
+          Chats stay in this page only
+        </div>
+        <p class="sidebar-disclaimer">
+          MannSathi is an AI support tool, not a therapist
+          or emergency service.
+        </p>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+
+      <header class="topbar">
+        <button class="mobile-menu" id="mobile-menu"
+                type="button" aria-label="Open navigation">☰</button>
+
+        <div class="topbar-title">
+          <span class="online-dot"></span>
+          MannSathi
+          <span class="topbar-subtitle">
+            Student well-being companion
+          </span>
+        </div>
+
+        <button class="clear-button" id="clear-chat" type="button">
+          Clear chat
+        </button>
+      </header>
+
+      <section class="chat-area" id="chat-area" aria-live="polite">
+
+        <div class="welcome" id="welcome">
+          <div class="welcome-symbol" aria-hidden="true">
+            <span class="sun-core"></span>
+            <span class="sun-ray ray-1"></span>
+            <span class="sun-ray ray-2"></span>
+            <span class="sun-ray ray-3"></span>
+            <span class="sun-ray ray-4"></span>
+          </div>
+
+          <p class="eyebrow">A SPACE JUST FOR YOU</p>
+
+          <h1>Hey, what's on<br class="mobile-break"> your mind?</h1>
+
+          <p class="welcome-copy">
+            Padhai ka pressure ho, assignment pending ho,
+            ya bas baat karni ho — you can start here.
+            No judgement, no pressure.
+          </p>
+
+          <div class="prompt-grid">
+
+            <button class="prompt-card" type="button"
+              data-prompt="I'm feeling stressed about my upcoming exams. Can you help me figure out what to do first?">
+              <span class="prompt-icon peach">↗</span>
+              <span>
+                <strong>Exam stress</strong>
+                <small>Let's make it manageable</small>
+              </span>
+              <span class="card-arrow">↗</span>
+            </button>
+
+            <button class="prompt-card" type="button"
+              data-prompt="I have too many assignments and I feel overwhelmed. Help me break them into smaller steps.">
+              <span class="prompt-icon green">☷</span>
+              <span>
+                <strong>Too many assignments</strong>
+                <small>One step at a time</small>
+              </span>
+              <span class="card-arrow">↗</span>
+            </button>
+
+            <button class="prompt-card" type="button"
+              data-prompt="I'm not feeling great today, and I don't really know why. Can you listen and help me sort through it?">
+              <span class="prompt-icon blue">♡</span>
+              <span>
+                <strong>Need to talk</strong>
+                <small>It's okay to start anywhere</small>
+              </span>
+              <span class="card-arrow">↗</span>
+            </button>
+
+            <button class="prompt-card" type="button"
+              data-prompt="Can you guide me through a short grounding exercise to help me feel calmer?">
+              <span class="prompt-icon yellow">☼</span>
+              <span>
+                <strong>Take a breather</strong>
+                <small>A small reset for your mind</small>
+              </span>
+              <span class="card-arrow">↗</span>
+            </button>
+
+          </div>
+        </div>
+
+        <div class="messages" id="messages"
+             aria-label="Conversation messages"></div>
+      </section>
+
+      <div class="composer-wrap">
+        <form class="composer" id="chat-form">
+          <textarea
+            id="message-input"
+            rows="1"
+            maxlength="4000"
+            placeholder="Share what's on your mind..."
+            aria-label="Your message"
+          ></textarea>
+
+          <button class="send-button" id="send-button" type="submit">
+            <span>Send</span>
+            <span aria-hidden="true">↑</span>
+          </button>
+        </form>
+
+        <div class="composer-meta">
+          <span>Take your time. There's no perfect way to say it.</span>
+          <span id="char-count">0 / 4000</span>
+        </div>
+
+        <p class="footer-disclaimer">
+          MannSathi can make mistakes. For serious or ongoing distress,
+          reach out to a trusted person or qualified professional.
+        </p>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
