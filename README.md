@@ -105,11 +105,11 @@ MannSathi is deployed on Vercel.
 
 To deploy your own instance:
 
-1. Import or deploy the repository through Vercel.
+1. Import the repository through Vercel and keep the Root Directory set to the repository root.
 2. Configure `GEMINI_API_KEY` and `GEMINI_MODEL` in the project's Environment Variables.
-3. Deploy the project and test both the homepage and `/api/chat`.
+3. Deploy the project and test the homepage, `/app.html`, and `POST /api/chat`.
 
-Vercel auto-detects the static pages and `api/chat.py`; no build step is needed.
+Vercel serves the static pages and files directly and deploys `api/chat.py` as the Python function at `/api/chat`; no custom build or rewrite rules are needed.
 
 ## Project Structure
 
