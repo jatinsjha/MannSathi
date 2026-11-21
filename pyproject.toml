@@ -8,4 +8,4 @@ dependencies = [
 ]
 
 [tool.vercel]
-entrypoint = "chat:handler"
+entrypoint = "api.chat:handler"
