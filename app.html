@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,6 +12,8 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/app.js" defer></script>
 </head>
 <body>
@@ -28,6 +29,11 @@
         <span>＋</span> New conversation
       </button>
 
+      <div class="chat-history-section" id="chat-history-section">
+        <div class="chat-history-label">Recent chats</div>
+        <div id="chat-history" class="chat-history"></div>
+      </div>
+
       <div class="sidebar-note">
         <span class="note-icon">✳</span>
         <p>
@@ -40,12 +46,16 @@
       <div class="sidebar-bottom">
         <div class="privacy-line">
           <span class="status-dot"></span>
-          Chats stay in this page only
+          Chats stay on this device only
         </div>
         <p class="sidebar-disclaimer">
           MannSathi is an AI support tool, not a therapist
           or emergency service.
         </p>
+      </div>
+
+      <div class="sidebar-actions">
+        <a href="index.html" class="sidebar-signout">← Sign out</a>
       </div>
     </aside>
 
@@ -63,9 +73,12 @@
           </span>
         </div>
 
-        <button class="clear-button" id="clear-chat" type="button">
-          Clear chat
-        </button>
+        <div class="topbar-right">
+          <span class="topbar-username" id="topbar-username"></span>
+          <button class="clear-button" id="clear-chat" type="button">
+            Clear chat
+          </button>
+        </div>
       </header>
 
       <section class="chat-area" id="chat-area" aria-live="polite">

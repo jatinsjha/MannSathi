@@ -1,47 +1,8 @@
 
-/* SIGNUP PAGE */
-
-.signup-card {
-    max-width: 430px;
-}
-
-.signup-card .form-heading {
-    margin-bottom: 27px;
-}
-
-.signup-card .form-group {
-    margin-bottom: 17px;
-}
-
-.signup-card .form-group input {
-    height: 49px;
-}
-
-.signup-card .login-button {
-    margin-top: 10px;
-}
-
-.signup-card .form-divider {
-    margin: 24px 0 17px;
-}
-
-@media (max-width: 800px) {
-    .signup-card .form-heading {
-        margin-bottom: 25px;
-    }
-
-    .signup-card .form-group {
-        margin-bottom: 16px;
-    }
-
-    .signup-card .form-group input {
-        height: 48px;
-    }
-
-    .signup-card .form-divider {
-        margin: 20px 0 15px;
-    }
-}
+/* ============================================================
+   MannSathi — Signup Page Styles
+   (Extends login.css styles with signup-specific overrides)
+   ============================================================ */
 
 :root {
     --background: #f7f6f1;
@@ -52,7 +13,49 @@
     --text: #202b25;
     --muted: #7d8780;
     --border: #e6e9e3;
+    --error: #bd4444;
+    --success: #2e7d52;
 }
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake {
+    0%  { transform: translateX(0); }
+    15% { transform: translateX(-7px); }
+    30% { transform: translateX(7px); }
+    45% { transform: translateX(-5px); }
+    60% { transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
+    90% { transform: translateX(3px); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes popIn {
+    0%   { opacity: 0; transform: scale(0.85); }
+    70%  { transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
 
 * {
     margin: 0;
@@ -67,13 +70,19 @@ body {
     min-height: 100vh;
 }
 
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+
 .auth-container {
     min-height: 100vh;
     display: grid;
     grid-template-columns: 1fr 1fr;
 }
 
-/* LEFT BRAND SECTION */
+/* ============================================================
+   LEFT BRAND SECTION
+   ============================================================ */
 
 .brand-section {
     background: var(--green);
@@ -97,6 +106,17 @@ body {
     bottom: -150px;
 }
 
+.brand-section::before {
+    content: "";
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 50%;
+    right: -60px;
+    top: -80px;
+}
+
 .brand {
     display: flex;
     align-items: center;
@@ -106,6 +126,11 @@ body {
     font-family: "Manrope", sans-serif;
     font-size: 23px;
     font-weight: 800;
+    transition: opacity 0.2s;
+}
+
+.brand:hover {
+    opacity: 0.85;
 }
 
 .brand-icon {
@@ -125,6 +150,8 @@ body {
     max-width: 490px;
     margin: auto 0;
     padding: 65px 0;
+    animation: fadeSlideUp 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 0.1s;
 }
 
 .eyebrow {
@@ -163,6 +190,12 @@ body {
     border-radius: 15px;
     position: relative;
     z-index: 1;
+    transition: background 0.25s, border-color 0.25s;
+}
+
+.quote-card:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.25);
 }
 
 .quote-mark {
@@ -191,8 +224,9 @@ body {
     z-index: 1;
 }
 
-
-/* RIGHT FORM SECTION */
+/* ============================================================
+   RIGHT FORM SECTION
+   ============================================================ */
 
 .form-section {
     display: flex;
@@ -206,6 +240,8 @@ body {
 .login-card {
     width: 100%;
     max-width: 410px;
+    animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 0.05s;
 }
 
 .form-heading {
@@ -233,6 +269,10 @@ body {
     line-height: 1.7;
 }
 
+/* ============================================================
+   FORM FIELDS
+   ============================================================ */
+
 .form-group {
     margin-bottom: 23px;
 }
@@ -248,13 +288,13 @@ body {
     width: 100%;
     height: 52px;
     padding: 0 15px;
-    border: 1px solid var(--border);
+    border: 1.5px solid var(--border);
     border-radius: 9px;
     background: var(--surface);
     font-family: inherit;
     font-size: 14px;
     outline: none;
-    transition: 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .form-group input::placeholder {
@@ -263,8 +303,40 @@ body {
 
 .form-group input:focus {
     border-color: var(--green);
-    box-shadow: 0 0 0 3px rgba(49,91,73,0.09);
+    box-shadow: 0 0 0 3.5px rgba(49, 91, 73, 0.12);
+    background: #fafcfb;
 }
+
+/* Validation states */
+.form-group input.input-error {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px rgba(189, 68, 68, 0.1);
+}
+
+.form-group input.input-success {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px rgba(46, 125, 82, 0.1);
+}
+
+/* Field hint text */
+.field-hint {
+    font-size: 11px;
+    margin-top: 6px;
+    color: var(--muted);
+    transition: color 0.2s;
+}
+
+.field-hint.error {
+    color: var(--error);
+}
+
+.field-hint.success {
+    color: var(--success);
+}
+
+/* ============================================================
+   PASSWORD FIELD
+   ============================================================ */
 
 .password-label {
     display: flex;
@@ -278,6 +350,13 @@ body {
     font-size: 12px;
     font-weight: 700;
     text-decoration: none;
+    transition: color 0.2s, opacity 0.2s;
+}
+
+.password-label a:hover,
+.signup-link a:hover {
+    color: var(--green-dark);
+    text-decoration: underline;
 }
 
 .password-wrapper {
@@ -297,10 +376,64 @@ body {
     background: transparent;
     color: var(--green);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
     cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 5px;
+    transition: color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.toggle-password:hover {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+/* ============================================================
+   PASSWORD STRENGTH INDICATOR
+   ============================================================ */
+
+.password-strength {
+    margin-top: 8px;
+}
+
+.password-strength-bar {
+    height: 4px;
+    border-radius: 4px;
+    background: var(--border);
+    overflow: hidden;
+    position: relative;
+}
+
+.password-strength-fill {
+    height: 100%;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.35s ease, background 0.35s ease;
+}
+
+.strength-weak   .password-strength-fill { width: 33%;  background: #e05b5b; }
+.strength-medium .password-strength-fill { width: 66%;  background: #e09b30; }
+.strength-strong .password-strength-fill { width: 100%; background: #2e7d52; }
+
+.strength-label {
+    font-size: 10px;
+    margin-top: 4px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.strength-weak   .strength-label { color: #e05b5b; }
+.strength-medium .strength-label { color: #c07a1a; }
+.strength-strong .strength-label { color: #2e7d52; }
+
+/* ============================================================
+   SUBMIT BUTTON
+   ============================================================ */
 
 .login-button {
     width: 100%;
@@ -317,16 +450,30 @@ body {
     align-items: center;
     justify-content: center;
     gap: 12px;
-    transition: 0.2s;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     margin-top: 8px;
+    position: relative;
+    overflow: hidden;
 }
 
-.login-button:hover {
+.login-button:hover:not(:disabled) {
     background: var(--green-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(49, 91, 73, 0.3);
+}
+
+.login-button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 .login-button span {
     font-size: 19px;
+    transition: transform 0.2s;
+}
+
+.login-button:hover:not(:disabled) span {
+    transform: translateX(3px);
 }
 
 .login-button:disabled {
@@ -334,17 +481,88 @@ body {
     cursor: not-allowed;
 }
 
+/* Loading state */
+.login-button.loading {
+    color: transparent;
+    pointer-events: none;
+}
+
+.login-button.loading::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(255,255,255,0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+/* ============================================================
+   GUEST BUTTON
+   ============================================================ */
+
+.guest-button {
+    width: 100%;
+    height: 49px;
+    margin-top: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--green);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.guest-button:hover {
+    background: var(--green-light);
+    border-color: var(--green);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(49, 91, 73, 0.12);
+}
+
+.guest-button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.guest-button span {
+    font-size: 18px;
+}
+
+/* ============================================================
+   FORM MESSAGES
+   ============================================================ */
+
 .form-message {
     min-height: 20px;
     font-size: 12px;
     margin-top: 12px;
     text-align: center;
     color: var(--green);
+    transition: opacity 0.2s;
+    animation: popIn 0.25s ease both;
 }
 
 .form-message.error {
-    color: #bd4444;
+    color: var(--error);
+    animation: shake 0.45s ease both;
 }
+
+.form-message:empty {
+    animation: none;
+}
+
+/* ============================================================
+   FOOTER LINKS
+   ============================================================ */
 
 .signup-link {
     text-align: center;
@@ -380,8 +598,37 @@ body {
     display: none;
 }
 
+/* ============================================================
+   SIGNUP-SPECIFIC OVERRIDES
+   ============================================================ */
 
-/* RESPONSIVE */
+.signup-card {
+    max-width: 430px;
+}
+
+.signup-card .form-heading {
+    margin-bottom: 27px;
+}
+
+.signup-card .form-group {
+    margin-bottom: 17px;
+}
+
+.signup-card .form-group input {
+    height: 49px;
+}
+
+.signup-card .login-button {
+    margin-top: 10px;
+}
+
+.signup-card .form-divider {
+    margin: 24px 0 17px;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
 
 @media (max-width: 800px) {
     .auth-container {
@@ -422,6 +669,22 @@ body {
         text-align: center;
         width: 100%;
     }
+
+    .signup-card .form-heading {
+        margin-bottom: 25px;
+    }
+
+    .signup-card .form-group {
+        margin-bottom: 16px;
+    }
+
+    .signup-card .form-group input {
+        height: 48px;
+    }
+
+    .signup-card .form-divider {
+        margin: 20px 0 15px;
+    }
 }
 
 @media (max-width: 400px) {
@@ -437,33 +700,4 @@ body {
     .mobile-brand {
         margin-bottom: 50px;
     }
-}
-/* Guest login button */
-
-.guest-button {
-    width: 100%;
-    height: 49px;
-    margin-top: 12px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    background: transparent;
-    color: var(--green);
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    transition: 0.2s;
-}
-
-.guest-button:hover {
-    background: var(--green-light);
-    border-color: var(--green);
-}
-
-.guest-button span {
-    font-size: 18px;
 }
