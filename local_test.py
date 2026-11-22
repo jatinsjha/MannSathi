@@ -1,7 +1,9 @@
 """Run MannSathi locally: python local_test.py  ->  http://127.0.0.1:8000
 
-Serves the static pages and routes POST /api/chat to api/chat.py.
-Reads GEMINI_API_KEY / GEMINI_MODEL from a .env file in this folder.
+Serves the static pages and routes:
+  POST /api/chat   -> api/chat.py
+  GET  /api/config -> api/config.py
+Reads GEMINI_API_KEY / GEMINI_MODEL / SUPABASE_* from a .env file in this folder.
 """
 import os
 import sys
@@ -20,6 +22,7 @@ if os.path.exists(env_path):
             os.environ.setdefault(key.strip(), value.strip().strip('"\''))
 
 from api.chat import handler as ChatHandler  # noqa: E402
+from api.config import handler as ConfigHandler  # noqa: E402
 
 
 class LocalHandler(SimpleHTTPRequestHandler):
@@ -32,8 +35,11 @@ class LocalHandler(SimpleHTTPRequestHandler):
         return ChatHandler.send_json(self, status, payload)
 
     def do_GET(self):
-        if self.path.split("?")[0] == "/api/chat":
+        clean_path = self.path.split("?")[0]
+        if clean_path == "/api/chat":
             return ChatHandler.do_GET(self)
+        if clean_path == "/api/config":
+            return ConfigHandler.do_GET(self)
         return super().do_GET()
 
 

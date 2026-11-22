@@ -1,11 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f7f6f1">
-
+    <meta name="theme-color" content="#0f1f35">
     <title>Create Account | MannSathi</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,8 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="css/signup.css">
+    <script>
+        const savedTheme = localStorage.getItem("mannsathi_theme");
+        if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+    </script>
 </head>
-
 <body>
 
     <main class="auth-container">
@@ -23,7 +24,9 @@
         <section class="brand-section">
 
             <a href="index.html" class="brand">
-                <div class="brand-icon">M</div>
+                <div class="brand-icon">
+                    <img src="images/logo.png" alt="MannSathi logo">
+                </div>
                 <span>MannSathi</span>
             </a>
 
@@ -39,7 +42,7 @@
                 </p>
 
                 <div class="quote-card">
-                    <div class="quote-mark">“</div>
+                    <div class="quote-mark">"</div>
                     <p>Every new beginning starts with a single step.</p>
                     <span>We're glad you're here.</span>
                 </div>
@@ -56,7 +59,9 @@
         <section class="form-section">
 
             <div class="mobile-brand">
-                <div class="brand-icon">M</div>
+                <div class="brand-icon">
+                    <img src="images/logo.png" alt="MannSathi logo">
+                </div>
                 <span>MannSathi</span>
             </div>
 
@@ -81,6 +86,7 @@
                             autocomplete="name"
                             required
                         >
+                        <div class="field-hint" id="hint-name"></div>
                     </div>
 
 
@@ -94,6 +100,7 @@
                             autocomplete="email"
                             required
                         >
+                        <div class="field-hint" id="hint-email"></div>
                     </div>
 
 
@@ -104,7 +111,7 @@
                             <input
                                 type="password"
                                 id="password"
-                                placeholder="Create a password"
+                                placeholder="Create a password (min. 8 chars)"
                                 autocomplete="new-password"
                                 minlength="8"
                                 required
@@ -143,18 +150,17 @@
                                 Show
                             </button>
                         </div>
+                        <div class="field-hint" id="hint-confirm"></div>
                     </div>
 
 
                     <button type="submit" class="login-button">
-    Create account
-    <span>→</span>
-</button>
+                        <span>Create account →</span>
+                    </button>
 
-<button type="button" class="guest-button" id="guest-login">
-    Continue as guest
-    <span>→</span>
-</button>
+                    <button type="button" class="guest-button" id="guest-login">
+                        <span>Continue as guest →</span>
+                    </button>
 
                     <p id="form-message" class="form-message" role="status"></p>
 

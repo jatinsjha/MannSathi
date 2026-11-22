@@ -1,11 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f7f6f1">
-
+    <meta name="theme-color" content="#0f1f35">
     <title>Sign in | MannSathi</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,8 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="css/login.css">
+    <script>
+        const savedTheme = localStorage.getItem("mannsathi_theme");
+        if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+    </script>
 </head>
-
 <body>
 
     <main class="auth-container">
@@ -23,7 +24,9 @@
         <section class="brand-section">
 
             <a href="index.html" class="brand">
-                <img src = "images/logo.png" class = "brand-icon">
+                <div class="brand-icon">
+                    <img src="images/logo.png" alt="MannSathi logo">
+                </div>
                 <span>MannSathi</span>
             </a>
 
@@ -39,7 +42,7 @@
                 </p>
 
                 <div class="quote-card">
-                    <div class="quote-mark">“</div>
+                    <div class="quote-mark">"</div>
                     <p>You don't have to figure everything out today.</p>
                     <span>One conversation at a time.</span>
                 </div>
@@ -56,7 +59,9 @@
         <section class="form-section">
 
             <div class="mobile-brand">
-                <div class="brand-icon">M</div>
+                <div class="brand-icon">
+                    <img src="images/logo.png" alt="MannSathi logo">
+                </div>
                 <span>MannSathi</span>
             </div>
 
@@ -115,8 +120,7 @@
 
 
                     <button type="submit" class="login-button">
-                        Sign in
-                        <span>→</span>
+                        <span>Sign in →</span>
                     </button>
 
                     <p id="form-message" class="form-message" role="status"></p>
