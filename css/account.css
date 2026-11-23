@@ -1,0 +1,26 @@
+@import url("auth.css");
+
+.signup-card { padding-top: 27px; padding-bottom: 27px; }
+.signup-card .form-heading { margin-bottom: 25px; }
+.signup-card .form-group { margin-bottom: 16px; }
+.signup-card .auth-divider { margin: 20px 0; }
+.field-hint { margin-top: 6px; font-size: 11px; line-height: 1.5; }
+.field-hint:empty { display: none; }
+.field-hint.error { color: var(--error); }
+.field-hint.success { color: var(--success); }
+.password-strength { display: none; margin-top: 9px; }
+.password-strength[class*="strength-"] { display: flex; align-items: center; gap: 10px; }
+.password-strength-bar { flex: 1; height: 3px; overflow: hidden; border-radius: 3px; background: var(--line-strong); }
+.password-strength-fill { height: 100%; transition: width .2s; }
+.strength-label { font-size: 10px; color: var(--muted); }
+.strength-weak .password-strength-fill { width: 25%; background: var(--error); }
+.strength-medium .password-strength-fill { width: 60%; background: var(--gold); }
+.strength-strong .password-strength-fill { width: 100%; background: var(--success); }
+@media (max-height: 800px) and (min-width: 861px) {
+  .signup-card { padding-top: 20px; padding-bottom: 20px; }
+  .signup-card .form-heading { margin-bottom: 22px; }
+  .signup-card .form-group { margin-bottom: 13px; }
+  .signup-card .form-group input { height: 45px; }
+  .signup-card .auth-divider { margin: 17px 0; }
+}
+@media (max-width: 860px) { .signup-card { padding-top: 38px; padding-bottom: 38px; } }

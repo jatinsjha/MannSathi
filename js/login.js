@@ -90,8 +90,8 @@ emailInput.addEventListener("blur", function () {
 togglePassword.addEventListener("click", function () {
     const isPassword = passwordInput.type === "password";
     passwordInput.type = isPassword ? "text" : "password";
-    // Eye icon: 👁 / 🙈 unicode trick via text node
-    togglePassword.textContent = isPassword ? "🙈" : "👁";
+    togglePassword.textContent = isPassword ? "Hide" : "Show";
+    togglePassword.setAttribute("aria-pressed", String(isPassword));
     togglePassword.setAttribute(
         "aria-label",
         isPassword ? "Hide password" : "Show password"

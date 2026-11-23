@@ -2,222 +2,151 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#ebf0f9">
-  <meta name="description" content="MannSathi — a supportive AI companion for college students.">
-  <title>MannSathi — Your Space. Your Pace.</title>
-
-  <!-- Prevent flash of wrong theme -->
-  <script>
-    (function() {
-      const saved = localStorage.getItem("mannsathi_theme");
-      if (saved) document.documentElement.setAttribute("data-theme", saved);
-    })();
-  </script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b14">
+  <meta name="description" content="Chat with MannSathi about college life, stress, and your day.">
+  <title>MannSathi</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <script src="js/theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/app.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/workspace.css">
 </head>
 <body>
-
-  <!-- Mobile backdrop -->
+  <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
+    <defs>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 20 11Z"/><path d="M8 10h8m-8 4h5"/></symbol>
+      <symbol id="i-breathe" viewBox="0 0 24 24"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6m-6 4h6m-6 4h3"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--panel)"/><circle cx="15" cy="17" r="3" fill="var(--panel)"/></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-8h8m-4-4 4 4-4 4"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    </defs>
+  </svg>
+  <a class="skip-link" href="#message-input">Skip to chat</a>
   <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
-
   <div class="app-wrapper">
     <div class="app-card">
-
-      <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
-      <aside class="sidebar" id="sidebar">
-
-        <!-- Brand & Theme Toggle -->
+      <aside class="sidebar" id="sidebar" aria-label="Conversations and account">
         <div class="sidebar-header">
-          <a class="sidebar-brand" href="app.html" aria-label="MannSathi home">
-            <img src="images/logo.png" alt="" class="sidebar-logo" aria-hidden="true">
-            <span class="sidebar-brand-name">MannSathi</span>
+          <a href="app.html" class="orbit-brand sidebar-brand" aria-label="MannSathi home">
+            <img src="images/logo.png" alt="" width="40" height="40"><span>MannSathi</span>
           </a>
-
-          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle dark/light mode">
-            <!-- Moon icon (shown in light mode) -->
-            <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-            <!-- Sun icon (shown in dark mode) -->
-            <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-          </button>
+          <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="Close menu"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
         </div>
-
-        <!-- New chat + search row -->
-        <div class="sidebar-actions-row">
-          <button class="btn-new-chat" id="new-chat" type="button" aria-label="Start new chat">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>New chat</span>
-          </button>
-          <button class="btn-icon-sm" id="sidebar-search-btn" type="button" aria-label="Search conversations" title="Search">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Conversations list -->
+        <button class="btn-new-chat" id="new-chat" type="button">
+          <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>New chat</span><kbd>Ctrl K</kbd>
+        </button>
         <div class="sidebar-conversations">
           <div class="conv-section-header">
-            <span>Your conversations</span>
-            <button class="clear-all-btn" id="clear-chat" type="button">Clear All</button>
+            <span class="recent-label"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>Recent</span>
+            <button class="search-history-button" id="sidebar-search-btn" type="button" aria-label="Search chats" aria-expanded="false" aria-controls="history-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
+          </div>
+          <div class="history-search" id="history-search" hidden>
+            <label class="sr-only" for="conversation-search">Search chats</label>
+            <input type="search" id="conversation-search" placeholder="Search chats…" autocomplete="off">
           </div>
           <div class="chat-history" id="chat-history" role="list" aria-label="Conversations"></div>
+          <button class="clear-all-btn" id="clear-chat" type="button" hidden>Clear history</button>
         </div>
-
-        <!-- Sidebar footer -->
-        <div class="sidebar-footer">
-          <a href="index.html" class="sidebar-footer-link" id="sidebar-signout">
-            <span class="sidebar-footer-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-              </svg>
-            </span>
-            Settings
-          </a>
-
+        <footer class="sidebar-footer">
+          <button class="space-nav-link" data-open-breathing type="button"><svg class="icon" aria-hidden="true"><use href="#i-breathe"/></svg><span>Breathing exercise</span></button>
+          <button class="space-nav-link" id="settings-button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></button>
           <div class="sidebar-user-row" id="user-profile-card">
             <div class="sidebar-user-avatar" id="user-avatar">S</div>
-            <span class="sidebar-user-name" id="sidebar-username">Student</span>
-            <a href="index.html" class="signout-icon-btn" title="Sign out" aria-label="Sign out">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-            </a>
+            <div class="sidebar-user-info"><span id="sidebar-username">Student</span><span id="account-type">Personal account</span></div>
+            <a href="index.html" class="signout-icon-btn" id="sidebar-signout" title="Sign out" aria-label="Sign out"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg></a>
           </div>
-        </div>
-
+        </footer>
       </aside>
-
-      <!-- ══ MAIN PANEL ════════════════════════════════════════ -->
-      <main class="main-panel">
-
-        <!-- Mobile topbar (hidden on desktop) -->
-        <div class="mobile-topbar" id="mobile-topbar">
-          <button class="mobile-menu" id="mobile-menu" type="button" aria-label="Open sidebar">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-          <span class="mobile-title">MannSathi</span>
-          <button class="theme-toggle" id="mobile-theme-toggle" type="button" aria-label="Toggle theme">
-            <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-            <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Hidden elements for JS compatibility -->
-        <span id="topbar-username" style="display:none"></span>
-        <span id="char-count" style="display:none">0 / 4000</span>
-
-        <!-- Chat scroll area -->
-        <section class="chat-area" id="chat-area" aria-live="polite">
-
-          <!-- Welcome / empty state -->
+      <main class="main-panel" id="main-panel">
+        <header class="workspace-topbar">
+          <div class="topbar-location">
+            <button class="icon-button mobile-menu" id="mobile-menu" type="button" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+            <button class="workspace-selector" id="space-home" type="button" aria-label="MannSathi, start a new chat">MannSathi</button>
+            <span id="conversation-title" class="conversation-title">New chat</span>
+          </div>
+          <div class="topbar-right">
+            <button type="button" class="icon-button theme-toggle" data-theme-toggle aria-label="Switch theme">
+              <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg>
+              <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13A9 9 0 1 1 11 3.2 7 7 0 0 0 20.8 13Z"/></svg>
+            </button>
+            <button type="button" class="icon-button more-button" data-open-settings aria-label="Chat settings"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg></button>
+          </div>
+        </header>
+        <section class="chat-area" id="chat-area" aria-label="Your conversation">
           <div class="welcome" id="welcome">
-            <div class="welcome-logo-wrap">
-              <img src="images/logo.png" alt="MannSathi" class="welcome-logo">
+            <div class="welcome-intro">
+              <div class="welcome-logo"><img src="images/logo.png" alt="MannSathi" width="76" height="76"></div>
+              <h1 class="welcome-title">What's on your mind?</h1>
             </div>
-            <h1 class="welcome-title">Hey, what's on your mind?</h1>
-            <p class="welcome-sub">
-              Exam pressure, assignment overload, or just feeling low — speak freely, in English or Hinglish. No judgment here.
-            </p>
-            <div class="prompt-grid">
-              <button class="prompt-chip" type="button"
-                data-prompt="I'm feeling stressed about my upcoming exams. Can you help me figure out what to prioritize?">
-                📚 Exam stress
+            <div class="prompt-grid" aria-label="Start a conversation">
+              <button class="prompt-chip" type="button" data-prompt="I'm stressed about my exams. Help me figure out what to prioritize.">
+                <span class="prompt-label"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg><strong>Exam stress</strong></span>
+                <span class="prompt-description">Help me prepare for my exams.</span>
               </button>
-              <button class="prompt-chip" type="button"
-                data-prompt="I have too many pending assignments and feel completely overwhelmed. Help me break it down.">
-                📋 Assignment overload
+              <button class="prompt-chip" type="button" data-prompt="Help me plan my day and organize my pending assignments.">
+                <span class="prompt-label"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><strong>Plan my day</strong></span>
+                <span class="prompt-description">Sort out my tasks for today.</span>
               </button>
-              <button class="prompt-chip" type="button"
-                data-prompt="I'm not feeling great today and don't really know why. Can you just listen and help me sort through it?">
-                💬 Need to talk
-              </button>
-              <button class="prompt-chip" type="button"
-                data-prompt="Can you guide me through a quick 2-minute breathing or grounding exercise to help me calm down?">
-                🧘 Take a breather
+              <button class="prompt-chip" type="button" data-prompt="I'd like to talk about how I've been feeling. Can you help me work through it?">
+                <span class="prompt-label"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><strong>Talk it out</strong></span>
+                <span class="prompt-description">I have something on my mind.</span>
               </button>
             </div>
           </div>
-
-          <!-- Messages injected here by JS -->
-          <div class="messages" id="messages" role="log" aria-label="Conversation"></div>
-
+          <div class="messages" id="messages" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions"></div>
         </section>
-
-        <!-- ══ COMPOSER ════════════════════════════════════════ -->
         <div class="composer-wrap">
           <form class="composer" id="chat-form">
-            <div class="composer-sparkle" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-              </svg>
+            <div class="composer-main">
+              <label class="sr-only" for="message-input">Message MannSathi</label>
+              <textarea id="message-input" rows="1" maxlength="4000" placeholder="Message MannSathi…"></textarea>
             </div>
-            <textarea
-              id="message-input"
-              rows="1"
-              maxlength="4000"
-              placeholder="What's in your mind?..."
-              aria-label="Your message"
-            ></textarea>
-            <button class="send-btn" id="send-button" type="submit" aria-label="Send message">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
+            <div class="composer-bottom">
+              <button class="composer-tool" data-open-breathing type="button"><svg class="icon" aria-hidden="true"><use href="#i-breathe"/></svg><span>Breathe</span></button>
+              <span class="composer-shortcut">Enter to send</span>
+              <span id="char-count">0 / 4000</span>
+              <button class="send-btn" id="send-button" type="submit" aria-label="Send message"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 17 8-17 8 4-8-4-8Zm4 8h13"/></svg></button>
+            </div>
           </form>
-          <p class="composer-hint">MannSathi can make mistakes. For serious distress, reach out to a trusted person or call 112.</p>
+          <p class="composer-hint">MannSathi is AI. For emergencies, call <a href="tel:112">112</a>.</p>
         </div>
-
       </main>
-
-    </div><!-- .app-card -->
-  </div><!-- .app-wrapper -->
-
+    </div>
+  </div>
+  <dialog class="cosmic-dialog" id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-top"><h2 id="settings-title">Settings</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close settings"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <p>Appearance</p>
+    <div class="theme-choices" role="group" aria-label="Appearance">
+      <button type="button" data-theme-choice="dark" aria-pressed="true"><span class="theme-swatch midnight"></span><strong>Dark</strong></button>
+      <button type="button" data-theme-choice="light" aria-pressed="false"><span class="theme-swatch dawn"></span><strong>Light</strong></button>
+    </div>
+    <p class="settings-note">Chats are saved in this browser.</p>
+    <button class="dialog-text-button" id="settings-clear-history" type="button">Clear chat history</button>
+  </dialog>
+  <dialog class="cosmic-dialog breathing-dialog" id="breathing-dialog" aria-labelledby="breathing-title">
+    <div class="dialog-top"><h2 id="breathing-title">Breathing exercise</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close breathing exercise"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <p>Follow the circle. Breathe naturally if holding feels uncomfortable.</p>
+    <div class="breathing-visual" id="breathing-visual"><div class="breathing-ring"></div><div class="breathing-circle"><span id="breathing-phase" aria-live="polite">Ready</span><span id="breathing-count"></span></div></div>
+    <button class="primary-button" id="breathing-start" type="button"><span>Start breathing</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <p class="breathing-footnote" id="breathing-progress">Inhale 4s · Hold 4s · Exhale 6s</p>
+  </dialog>
+  <dialog class="cosmic-dialog" id="clear-dialog" aria-labelledby="clear-title">
+    <div class="dialog-top"><h2 id="clear-title">Clear chat history?</h2><button class="icon-button" type="button" data-close-dialog aria-label="Keep chats"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <p>All saved chats will be removed from this browser.</p>
+    <div class="dialog-actions"><button class="guest-button" type="button" data-close-dialog>Cancel</button><button class="primary-button" id="confirm-clear-history" type="button">Clear history</button></div>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

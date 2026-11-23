@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="680" viewBox="0 0 680 680" fill="none">
+  <defs>
+    <radialGradient id="halo"><stop stop-color="#a18bb8" stop-opacity=".16"/><stop offset="1" stop-color="#a18bb8" stop-opacity="0"/></radialGradient>
+    <radialGradient id="planet" cx=".28" cy=".22" r=".9"><stop stop-color="#d8c2da"/><stop offset=".38" stop-color="#9a83b0"/><stop offset=".72" stop-color="#53445f"/><stop offset="1" stop-color="#1b172c"/></radialGradient>
+    <linearGradient id="ring" x1="118" y1="424" x2="554" y2="248" gradientUnits="userSpaceOnUse"><stop stop-color="#b7a0cc" stop-opacity=".05"/><stop offset=".4" stop-color="#cbb3d9" stop-opacity=".7"/><stop offset="1" stop-color="#b7a0cc" stop-opacity=".08"/></linearGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".16"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+    <clipPath id="disc"><circle cx="340" cy="333" r="108"/></clipPath>
+  </defs>
+  <circle cx="340" cy="333" r="310" fill="url(#halo)"/>
+  <g stroke="#bcabc8" stroke-opacity=".16" stroke-width=".7"><circle cx="340" cy="333" r="203"/><circle cx="340" cy="333" r="271" stroke-dasharray="2 11"/><ellipse cx="340" cy="333" rx="297" ry="87" transform="rotate(-31 340 333)"/><ellipse cx="340" cy="333" rx="256" ry="122" transform="rotate(38 340 333)"/><path d="M340 42v50m0 486v44M49 333h50m486 0h45"/></g>
+  <ellipse cx="340" cy="333" rx="243" ry="61" transform="rotate(-24 340 333)" stroke="url(#ring)" stroke-width="13"/>
+  <circle cx="340" cy="333" r="108" fill="url(#planet)"/>
+  <g clip-path="url(#disc)" filter="url(#grain)"><circle cx="340" cy="333" r="108" fill="url(#planet)"/></g>
+  <path d="M122 428c23 32 139 8 251-42s193-113 174-144" stroke="url(#ring)" stroke-width="13"/>
+  <path d="M119 426c23 32 139 8 251-42s193-113 174-144" stroke="#d2bbd8" stroke-opacity=".24" stroke-width=".8"/>
+  <circle cx="506" cy="213" r="6" fill="#deb78a"/><circle cx="176" cy="451" r="3" fill="#c8b8d9"/><circle cx="233" cy="80" r="1.8" fill="#d6cbdc"/><circle cx="559" cy="465" r="2" fill="#d6cbdc"/><circle cx="108" cy="260" r="1.4" fill="#d6cbdc"/>
+  <g stroke="#dac5aa" stroke-width="1"><path d="M151 151v14m-7-7h14M518 506v18m-9-9h18"/></g>
+  <g stroke="#bcabc8" stroke-opacity=".3" stroke-width=".7"><path d="m488 178 40-25h60M185 493l-27 27H90"/></g>
+  <g fill="#b3a5bd" font-family="monospace" font-size="9" letter-spacing="2"><text x="538" y="145">YOUR ORBIT</text><text x="91" y="536">YOUR PACE</text></g>
+</svg>

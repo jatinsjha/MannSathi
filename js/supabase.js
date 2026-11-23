@@ -22,3 +22,7 @@ window.supabaseReady = (async function () {
         throw error;
     }
 })();
+
+// Guest browsing remains available if authentication cannot initialize.
+// Keep the original promise rejected so forms can display their error state.
+window.supabaseReady.catch(() => {});

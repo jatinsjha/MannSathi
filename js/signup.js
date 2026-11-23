@@ -104,7 +104,8 @@ document.querySelectorAll(".toggle-password").forEach(function (button) {
         const target = document.getElementById(button.dataset.target);
         const isPassword = target.type === "password";
         target.type = isPassword ? "text" : "password";
-        button.textContent = isPassword ? "🙈" : "👁";
+        button.textContent = isPassword ? "Hide" : "Show";
+        button.setAttribute("aria-pressed", String(isPassword));
         button.setAttribute(
             "aria-label",
             isPassword ? "Hide password" : "Show password"

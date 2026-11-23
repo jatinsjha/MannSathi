@@ -1,196 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f1f35">
-    <title>Create Account | MannSathi</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="css/signup.css">
-    <script>
-        const savedTheme = localStorage.getItem("mannsathi_theme");
-        if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b14">
+  <meta name="description" content="Create your MannSathi account.">
+  <title>Create account | MannSathi</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <script src="js/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/account.css">
 </head>
-<body>
-
-    <main class="auth-container">
-
-        <!-- Left branding section -->
-        <section class="brand-section">
-
-            <a href="index.html" class="brand">
-                <div class="brand-icon">
-                    <img src="images/logo.png" alt="MannSathi logo">
-                </div>
-                <span>MannSathi</span>
-            </a>
-
-            <div class="brand-content">
-                <span class="eyebrow">A SPACE THAT UNDERSTANDS</span>
-
-                <h1>Your journey<br>starts <span>here.</span></h1>
-
-                <p>
-                    Create your personal space to talk, reflect,
-                    learn and navigate your college journey
-                    with a little support along the way.
-                </p>
-
-                <div class="quote-card">
-                    <div class="quote-mark">"</div>
-                    <p>Every new beginning starts with a single step.</p>
-                    <span>We're glad you're here.</span>
-                </div>
-            </div>
-
-            <div class="brand-footer">
-                Made for students, with care.
-            </div>
-
-        </section>
-
-
-        <!-- Right signup section -->
-        <section class="form-section">
-
-            <div class="mobile-brand">
-                <div class="brand-icon">
-                    <img src="images/logo.png" alt="MannSathi logo">
-                </div>
-                <span>MannSathi</span>
-            </div>
-
-            <div class="login-card signup-card">
-
-                <div class="form-heading">
-                    <span class="welcome-label">GET STARTED</span>
-                    <h2>Create your account.</h2>
-                    <p>A safe space for your thoughts starts here.</p>
-                </div>
-
-
-                <form id="signup-form">
-
-                    <div class="form-group">
-                        <label for="full-name">Full name</label>
-
-                        <input
-                            type="text"
-                            id="full-name"
-                            placeholder="Enter your full name"
-                            autocomplete="name"
-                            required
-                        >
-                        <div class="field-hint" id="hint-name"></div>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="email">Email address</label>
-
-                        <input
-                            type="email"
-                            id="email"
-                            placeholder="you@example.com"
-                            autocomplete="email"
-                            required
-                        >
-                        <div class="field-hint" id="hint-email"></div>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="password">Password</label>
-
-                        <div class="password-wrapper">
-                            <input
-                                type="password"
-                                id="password"
-                                placeholder="Create a password (min. 8 chars)"
-                                autocomplete="new-password"
-                                minlength="8"
-                                required
-                            >
-
-                            <button
-                                type="button"
-                                class="toggle-password"
-                                data-target="password"
-                                aria-label="Show password"
-                            >
-                                Show
-                            </button>
-                        </div>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="confirm-password">Confirm password</label>
-
-                        <div class="password-wrapper">
-                            <input
-                                type="password"
-                                id="confirm-password"
-                                placeholder="Re-enter your password"
-                                autocomplete="new-password"
-                                required
-                            >
-
-                            <button
-                                type="button"
-                                class="toggle-password"
-                                data-target="confirm-password"
-                                aria-label="Show password"
-                            >
-                                Show
-                            </button>
-                        </div>
-                        <div class="field-hint" id="hint-confirm"></div>
-                    </div>
-
-
-                    <button type="submit" class="login-button">
-                        <span>Create account →</span>
-                    </button>
-
-                    <button type="button" class="guest-button" id="guest-login">
-                        <span>Continue as guest →</span>
-                    </button>
-
-                    <p id="form-message" class="form-message" role="status"></p>
-
-                </form>
-
-
-                <div class="signup-link">
-                    Already have an account?
-                    <a href="index.html">Sign in</a>
-                </div>
-
-                <div class="form-divider"></div>
-
-                <p class="privacy-note">
-                    Your thoughts are personal. Your space is private.
-                </p>
-
-            </div>
-
-            <div class="form-footer">
-                © 2026 MannSathi. Made with care for students.
-            </div>
-
-        </section>
-
-    </main>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/signup.js"></script>
-
+<body class="auth-page">
+  <a class="skip-link" href="#full-name">Skip to create account</a>
+  <main class="auth-container">
+    <section class="brand-section" aria-label="MannSathi">
+      <a href="index.html" class="orbit-brand" aria-label="MannSathi home"><img src="images/logo.png" alt="" width="38" height="38"><span>MannSathi</span></a>
+      <div class="brand-content"><img class="auth-logo" src="images/logo.png" alt="MannSathi logo" width="229" height="229"><h1>MannSathi</h1></div>
+    </section>
+    <section class="form-section" aria-labelledby="form-title">
+      <nav class="form-top" aria-label="Account navigation"><a href="index.html" class="orbit-brand mobile-brand" aria-label="MannSathi home"><img src="images/logo.png" alt="" width="38" height="38"><span>MannSathi</span></a><a class="account-link" href="index.html">Sign in <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a></nav>
+      <div class="login-card signup-card">
+        <header class="form-heading"><h2 id="form-title">Create account</h2></header>
+        <form id="signup-form">
+          <div class="form-group"><label for="full-name">Full name</label><input type="text" id="full-name" placeholder="Your full name" autocomplete="name" minlength="2" aria-describedby="hint-name" required><div class="field-hint" id="hint-name" aria-live="polite"></div></div>
+          <div class="form-group"><label for="email">Email</label><input type="email" id="email" placeholder="you@example.com" autocomplete="email" aria-describedby="hint-email" required><div class="field-hint" id="hint-email" aria-live="polite"></div></div>
+          <div class="form-group"><label for="password">Password</label><div class="password-wrapper"><input type="password" id="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required><button type="button" class="toggle-password" data-target="password" aria-label="Show password" aria-pressed="false">Show</button></div></div>
+          <div class="form-group"><label for="confirm-password">Confirm password</label><div class="password-wrapper"><input type="password" id="confirm-password" placeholder="Confirm your password" autocomplete="new-password" minlength="8" aria-describedby="hint-confirm" required><button type="button" class="toggle-password" data-target="confirm-password" aria-label="Show password" aria-pressed="false">Show</button></div><div class="field-hint" id="hint-confirm" aria-live="polite"></div></div>
+          <button type="submit" class="primary-button login-button"><span>Create account</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></button>
+          <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+          <div class="auth-divider">or</div>
+          <button type="button" class="guest-button" id="guest-login">Continue as guest</button>
+        </form>
+      </div>
+      <footer class="form-footer"><span>&copy; 2026 MannSathi</span><button type="button" class="icon-button" data-theme-toggle aria-label="Switch theme"><svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13A9 9 0 1 1 11 3.2 7 7 0 0 0 20.8 13Z"/></svg></button></footer>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/signup.js"></script>
 </body>
 </html>
