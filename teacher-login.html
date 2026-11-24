@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b14">
+  <meta name="description" content="Teacher sign in for MannSathi class assignments.">
+  <title>Teacher sign in | MannSathi</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <script src="js/theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page" data-login-role="teacher">
+  <a class="skip-link" href="#email">Skip to sign in</a>
+  <main class="auth-container">
+    <section class="brand-section" aria-label="MannSathi">
+      <a href="index.html" class="orbit-brand" aria-label="MannSathi home"><img src="images/logo.png" alt="" width="38" height="38"><span>MannSathi</span></a>
+      <div class="brand-content"><img class="auth-logo" src="images/logo.png" alt="MannSathi logo" width="229" height="229"><h1>MannSathi</h1></div>
+    </section>
+    <section class="form-section" aria-labelledby="form-title">
+      <nav class="form-top" aria-label="Account navigation"><a href="index.html" class="orbit-brand mobile-brand" aria-label="MannSathi home"><img src="images/logo.png" alt="" width="38" height="38"><span>MannSathi</span></a><a class="account-link" href="index.html">Student sign in <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a></nav>
+      <div class="login-card">
+        <nav class="login-role-links" aria-label="Sign-in type"><a href="index.html">Student sign in</a><a href="teacher-login.html" aria-current="page">Teacher sign in</a></nav>
+        <header class="form-heading"><h2 id="form-title">Teacher sign in</h2><p>Assign work to your class or an individual student.</p></header>
+        <form id="login-form">
+          <div class="form-group"><label for="email">Email</label><input type="email" id="email" placeholder="you@college.edu" autocomplete="email" required></div>
+          <div class="form-group">
+            <div class="password-label"><label for="password">Password</label><a href="#" id="forgot-password">Forgot password?</a></div>
+            <div class="password-wrapper"><input type="password" id="password" placeholder="Your password" autocomplete="current-password" required><button type="button" id="toggle-password" class="toggle-password" aria-label="Show password" aria-pressed="false">Show</button></div>
+          </div>
+          <button type="submit" class="primary-button login-button"><span>Sign in</span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></button>
+          <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
+          <a id="role-login-message-link" class="role-login-message-link" href="index.html" hidden>Go to student sign in</a>
+        </form>
+        <p class="teacher-access-note">Your college must approve your teacher account and class access before you can sign in here.</p>
+        <div class="auth-divider">or</div>
+        <a class="guest-button" href="app.html?guest=true">Continue as guest</a>
+      </div>
+      <footer class="form-footer"><span>&copy; 2026 MannSathi</span><button type="button" class="icon-button" data-theme-toggle aria-label="Switch theme"><svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg><svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13A9 9 0 1 1 11 3.2 7 7 0 0 0 20.8 13Z"/></svg></button></footer>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

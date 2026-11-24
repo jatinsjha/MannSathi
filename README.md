@@ -4,7 +4,7 @@ MannSathi is an AI-powered student well-being companion designed to help student
 
 Built with a simple web interface and the Google Gemini API, MannSathi encourages students to express what is on their mind and offers concise, practical suggestions to help them take the next step.
 
-Smart Calendar is the first student workspace module: month/week/day views, personal event CRUD, all-day events, schedule summaries, and saved reminder preferences. It uses Supabase persistence independently of Gemini. Review [the calendar architecture, proposed SQL, security findings, and deployment guide](docs/smart-calendar.md) before enabling it. The database migration is not applied automatically. Task Manager, Focus Room, and Student Progress await separate approval.
+The full-screen student workspace includes Smart Calendar and Task Manager, independently of Gemini. Task Manager supports personal tasks, teacher assignments to a class or individual student, private completion tracking and persistent assignment notifications. Students and teachers have separate sign-in pages with backend role verification. See [the Task Manager deployment and onboarding guide](docs/task-manager.md) and [the Calendar guide](docs/smart-calendar.md). Focus Room and Student Progress remain future modules.
 
 **Live Demo:** https://mannsathi.vercel.app
 
@@ -95,6 +95,8 @@ Replace the placeholder with your own API key.
 
 Use only a Supabase publishable or legacy anon key as `SUPABASE_KEY`; `/api/config` rejects secret/service-role keys. Review the read-only schema findings and approve the proposed `database/migrations/000_profile_privileges.sql` (profile grants) and `database/migrations/001_smart_calendar.sql` (calendar) before applying them in that order. Rerun `database/inspect_calendar_schema.sql` if your schema has changed. See the calendar guide for constraints, policies, and two-account verification.
 
+For this workspace the user confirmed 000/001 are already applied; do not rerun them. Task Manager needs the new `database/migrations/002_tasks_and_teachers.sql`, followed by administrator provisioning of the intended teachers and approved students. Public signup cannot grant teacher access. Add `/teacher-login.html` to Supabase Auth's allowed password-reset redirects. Migration 002 has been tested in a local ephemeral PostgreSQL engine and has not been applied to live Supabase by the agent.
+
 **Never commit `.env`, `.env.local`, or API keys to GitHub.**
 
 ### 5. Run Locally
@@ -113,9 +115,9 @@ To deploy your own instance:
 
 1. Import the repository through Vercel and keep the Root Directory set to the repository root.
 2. Configure `GEMINI_API_KEY`, `GEMINI_MODEL`, `SUPABASE_URL`, and a publishable/anon `SUPABASE_KEY` in the project's Environment Variables.
-3. Review and apply the calendar migration only after checking the live schema. Deploy the project and test the homepage, `/app.html`, `POST /api/chat`, and authenticated CRUD at `/api/calendar`.
+3. Review/apply required migrations and provision the intended teacher/class memberships. Deploy role-checked login and `/api/tasks` together with migration 002. Test the homepage, `/teacher-login.html`, `/app.html`, `POST /api/chat`, and authenticated Calendar/Task CRUD.
 
-Vercel serves the static pages and files directly and deploys the Python handlers at `/api/chat`, `/api/config`, and `/api/calendar`; no frontend build or rewrite rules are introduced. Install the updated Python requirements, including IANA timezone data.
+Vercel serves the static pages and files directly and deploys the Python handlers at `/api/chat`, `/api/config`, `/api/calendar`, and `/api/tasks`; no frontend build or rewrite rules are introduced. Install the Python requirements, including IANA timezone data. Teacher and student login still use the same Supabase Auth service; database permissions determine access.
 
 ## Project Structure
 

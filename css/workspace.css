@@ -6,21 +6,22 @@
 .app-wrapper {
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 28px;
+  padding: 0;
   background: radial-gradient(ellipse at 18% 52%, #59426148, transparent 48%), radial-gradient(ellipse at 85% 20%, #263f804d, transparent 55%), #0b1020;
 }
 .app-card {
   display: grid;
   grid-template-columns: 246px minmax(0,1fr);
-  max-width: 1480px;
-  height: calc(100vh - 56px);
-  height: calc(100dvh - 56px);
-  margin: auto;
-  padding: 12px 12px 12px 0;
-  border: 1px solid #c1b7e01a;
-  border-radius: 24px;
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   background: #090c16;
-  box-shadow: 0 30px 100px #03050b75;
+  box-shadow: none;
   overflow: hidden;
 }
 .sidebar { display: flex; flex-direction: column; min-height: 0; padding: 19px 18px 0; background: linear-gradient(165deg, #0b0d1900 25%, #40303d2b 62%, #0b0d1900); }
@@ -74,8 +75,8 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  border: 1px solid #bbb2d523;
-  border-radius: 19px;
+  border: 0;
+  border-radius: 0;
   background: radial-gradient(ellipse at 35% 43%, #73506f45, transparent 39%), radial-gradient(ellipse at 79% 37%, #25466543, transparent 43%), linear-gradient(175deg, #0e1528, #0d121e 60%, #0a0e17);
   overflow: hidden;
 }
@@ -194,7 +195,7 @@
 .dialog-actions .guest-button { border: 1px solid var(--line-strong); border-radius: 10px; background: transparent; color: var(--secondary); }
 
 [data-theme="light"] .app-wrapper { background: radial-gradient(ellipse at 18% 52%, #bba0ce4a, transparent 48%), radial-gradient(ellipse at 85% 20%, #a7bade57, transparent 55%), #e8e9f2; }
-[data-theme="light"] .app-card { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
+[data-theme="light"] .app-card { background: var(--panel); box-shadow: none; }
 [data-theme="light"] .sidebar { background: transparent; }
 [data-theme="light"] .main-panel { border-color: var(--line); background: radial-gradient(ellipse at 35% 43%, #d8bbdf50, transparent 40%), radial-gradient(ellipse at 79% 37%, #b9d1e64a, transparent 43%), #f9f8fc; }
 [data-theme="light"] .workspace-selector, [data-theme="light"] .more-button { background: #fff9; }
@@ -205,10 +206,8 @@
 [data-theme="light"] .composer textarea::placeholder { color: var(--muted); }
 [data-theme="light"] .msg-bubble { background: #fff9; }
 
-@media (min-width: 1600px) { .app-wrapper { padding: 40px; } .app-card { height: calc(100dvh - 80px); } }
 @media (max-width: 1100px) {
-  .app-wrapper { padding: 18px; }
-  .app-card { grid-template-columns: 220px minmax(0,1fr); height: calc(100dvh - 36px); }
+  .app-card { grid-template-columns: 220px minmax(0,1fr); }
   .sidebar { padding-left: 14px; padding-right: 14px; }
   .sidebar-brand { font-size: 19px; }
   .sidebar-brand img { width: 36px; height: 36px; }

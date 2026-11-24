@@ -29,6 +29,12 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/test-supabase.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(stubSdk); return; }
   if (url.pathname === '/api/config') { json(res, 200, { supabaseUrl: 'https://example.test', supabaseKey: 'test-publishable-fixture' }); return; }
+  if (url.pathname === '/api/tasks') {
+    const action = url.searchParams.get('action');
+    const user = req.headers.authorization === 'Bearer test-B' ? 'B' : 'A';
+    json(res, 200, action === 'context' ? { role: 'student', user_id: user, batches: [], students: [] } : action === 'notifications' ? { notifications: [], unread_count: 0 } : { tasks: [], role: 'student' });
+    return;
+  }
   if (url.pathname === '/api/chat') { for await (const chunk of req) { /* Consume the fixture chat request. */ } json(res, 200, { reply: 'Chat still works.' }); return; }
   if (url.pathname === '/api/calendar') {
     if (offline) { req.socket.destroy(); return; }

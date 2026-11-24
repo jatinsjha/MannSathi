@@ -42,28 +42,11 @@
         $("calendar-delete-dialog").close();
     }
     function showCalendar() {
-        if (typeof canNavigate === "function" && !canNavigate()) return;
-        panel.hidden = false;
-        $("chat-area").hidden = true;
-        document.querySelector(".composer-wrap").hidden = true;
-        $("conversation-title").hidden = true;
-        $("open-calendar").setAttribute("aria-current", "page");
-        $("open-chat").removeAttribute("aria-current");
-        document.querySelector(".skip-link").href = "#calendar-create";
-        document.querySelector(".skip-link").textContent = "Skip to calendar";
-        if (typeof closeSidebar === "function") closeSidebar();
+        if (!window.MannSathiWorkspace.show("calendar")) return;
         load();
     }
     function showChat() {
-        panel.hidden = true;
-        $("chat-area").hidden = false;
-        document.querySelector(".composer-wrap").hidden = false;
-        $("conversation-title").hidden = false;
-        $("open-chat").setAttribute("aria-current", "page");
-        $("open-calendar").removeAttribute("aria-current");
-        document.querySelector(".skip-link").href = "#message-input";
-        document.querySelector(".skip-link").textContent = "Skip to chat";
-        if (typeof closeSidebar === "function") closeSidebar();
+        window.MannSathiWorkspace.show("chat");
     }
     async function load() {
         const current = ++generation;

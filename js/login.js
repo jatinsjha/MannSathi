@@ -10,6 +10,8 @@ const message      = document.getElementById("form-message");
 const loginButton  = loginForm.querySelector(".login-button");
 const forgotPassword = document.getElementById("forgot-password");
 const togglePassword = document.getElementById("toggle-password");
+const expectedLoginRole = document.body.dataset.loginRole === "teacher" ? "teacher" : "student";
+const roleLoginLink = document.getElementById("role-login-message-link");
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -53,18 +55,56 @@ function setLoading(isLoading) {
     }
 }
 
+// The selected sign-in page never grants a role. The verified backend context
+// reads college-managed permissions after Supabase has authenticated the user.
+async function verifyLoginRole(supabaseClient, session) {
+    if (!session?.access_token) throw new Error("Login failed. Please try again.");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    let context;
+    try {
+        const response = await fetch("/api/tasks?action=context", {
+            headers: { Authorization: "Bearer " + session.access_token },
+            cache: "no-store", signal: controller.signal
+        });
+        try { context = await response.json(); }
+        catch { throw new Error("Could not verify your account access. Please try again shortly."); }
+        if (!response.ok) throw new Error(context.error || "Could not verify your account access. Please try again shortly.");
+        if (!["student", "teacher"].includes(context.role)) throw new Error("Could not verify your account access. Please try again shortly.");
+    } catch (error) {
+        if (error.name === "AbortError") throw new Error("Account verification timed out. Please try again.");
+        throw error;
+    } finally { clearTimeout(timeout); }
+    if (context.role !== expectedLoginRole) {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) throw new Error("Could not close this session. Please sign out before switching accounts.");
+        if (roleLoginLink) roleLoginLink.hidden = false;
+        throw new Error(expectedLoginRole === "teacher"
+            ? "This account does not have approved teacher access. Use student sign in, or contact your college."
+            : "This is a teacher account. Please use teacher sign in.");
+    }
+    return context;
+}
+
 // ── Check if already logged in ───────────────────────────────
 
 (async function checkSession() {
+    let foundSession = false;
+    setLoading(true);
     try {
         const supabaseClient = await window.supabaseReady;
-        const { data: { session } } = await supabaseClient.auth.getSession();
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
         if (session) {
+            foundSession = true;
+            await verifyLoginRole(supabaseClient, session);
             window.location.href = "app.html";
         }
-    } catch (_) {
-        // Not logged in or Supabase unavailable — stay on page
-    }
+    } catch (error) {
+        // An unavailable client leaves the sign-in form usable. Existing
+        // sessions must pass backend access verification before redirecting.
+        if (foundSession) setMessage(error.message || "Could not verify your account access.", true);
+    } finally { setLoading(false); }
 })();
 
 // ── Real-time email validation ───────────────────────────────
@@ -102,11 +142,13 @@ togglePassword.addEventListener("click", function () {
 
 loginForm.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (loginButton.disabled) return;
 
     const email    = emailInput.value.trim();
     const password = passwordInput.value;
 
     setMessage("");
+    if (roleLoginLink) roleLoginLink.hidden = true;
 
     if (!email || !password) {
         setMessage("Please enter your email and password.", true);
@@ -137,6 +179,8 @@ loginForm.addEventListener("submit", async function (event) {
             throw new Error("Login failed. Please try again.");
         }
 
+        setMessage("Verifying your account access…");
+        await verifyLoginRole(supabaseClient, data.session);
         setMessage("Login successful! Opening MannSathi...");
         setInputState(emailInput, "success");
         setInputState(passwordInput, "success");
@@ -184,7 +228,7 @@ forgotPassword.addEventListener("click", async function (event) {
         const { error } = await supabaseClient.auth.resetPasswordForEmail(
             email,
             {
-                redirectTo: window.location.origin + "/index.html"
+                redirectTo: window.location.origin + (expectedLoginRole === "teacher" ? "/teacher-login.html" : "/index.html")
             }
         );
 

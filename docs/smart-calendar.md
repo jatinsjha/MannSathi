@@ -1,6 +1,6 @@
 # Smart Calendar: implementation and deployment
 
-Only Module 1 is implemented. Task Manager, Focus Room, progress statistics, teacher tools, and AI calendar actions remain future work.
+This guide records the Calendar implementation. Task Manager, separate teacher/student sign-in and assignment notifications have now been added; see [task-manager.md](task-manager.md). The user confirmed Calendar/profile migrations 000/001 are applied. Focus Room, progress statistics and AI calendar actions remain future work.
 
 ## Existing architecture and reuse
 

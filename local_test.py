@@ -4,6 +4,7 @@ Serves the static pages and routes:
   POST /api/chat   -> api/chat.py
   GET  /api/config -> api/config.py
   GET/POST/PATCH/DELETE /api/calendar -> api/calendar.py
+  GET/POST/PATCH/DELETE /api/tasks -> api/tasks.py
 Reads GEMINI_API_KEY / GEMINI_MODEL / SUPABASE_* from a .env file in this folder.
 """
 import os
@@ -25,10 +26,13 @@ if os.path.exists(env_path):
 from api.chat import handler as ChatHandler  # noqa: E402
 from api.config import handler as ConfigHandler  # noqa: E402
 from api.calendar import dispatch as calendar_dispatch  # noqa: E402
+from api.tasks import dispatch as tasks_dispatch  # noqa: E402
 
 
 class LocalHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
+        if self.path.split("?")[0] == "/api/tasks":
+            return tasks_dispatch(self, "POST")
         if self.path.split("?")[0] == "/api/calendar":
             return calendar_dispatch(self, "POST")
         if self.path.split("?")[0] == "/api/chat":
@@ -40,6 +44,8 @@ class LocalHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         clean_path = self.path.split("?")[0]
+        if clean_path == "/api/tasks":
+            return tasks_dispatch(self, "GET")
         if clean_path == "/api/calendar":
             return calendar_dispatch(self, "GET")
         if clean_path == "/api/chat":
@@ -49,16 +55,22 @@ class LocalHandler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_PATCH(self):
+        if self.path.split("?")[0] == "/api/tasks":
+            return tasks_dispatch(self, "PATCH")
         if self.path.split("?")[0] == "/api/calendar":
             return calendar_dispatch(self, "PATCH")
         self.send_error(404)
 
     def do_DELETE(self):
+        if self.path.split("?")[0] == "/api/tasks":
+            return tasks_dispatch(self, "DELETE")
         if self.path.split("?")[0] == "/api/calendar":
             return calendar_dispatch(self, "DELETE")
         self.send_error(404)
 
     def do_PUT(self):
+        if self.path.split("?")[0] == "/api/tasks":
+            return tasks_dispatch(self, "PUT")
         if self.path.split("?")[0] == "/api/calendar":
             return calendar_dispatch(self, "PUT")
         self.send_error(404)

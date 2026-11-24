@@ -14,7 +14,9 @@ const context = {
     return response;
   }
 };
-vm.runInNewContext(source, context);
+vm.createContext(context);
+vm.runInContext(fs.readFileSync('js/services/authenticated-api.js', 'utf8'), context);
+vm.runInContext(source, context);
 const service = context.window.MannSathiCalendarService;
 (async () => {
   response = { ok: true, json: async () => ({ events: [] }) };

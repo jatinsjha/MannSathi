@@ -16,6 +16,12 @@
 .account-link:hover { color: var(--ink); }
 .mobile-brand { display: none; }
 .login-card { width: 100%; max-width: 350px; margin: auto; padding: 45px 0; }
+.login-role-links { display: flex; gap: 6px; margin-bottom: 25px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; }
+.login-role-links a { flex: 1; padding: 10px 7px; border-radius: 7px; color: var(--secondary); font-size: 11px; line-height: 1.5; text-align: center; }
+.login-role-links a:hover { color: var(--ink); background: var(--surface-hover); }
+.login-role-links a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+.role-login-message-link { display: inline-block; margin-top: 9px; color: var(--accent); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.teacher-access-note { margin: 20px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .form-heading { margin-bottom: 32px; }
 .form-heading h2 { margin: 0; font-family: var(--sans); font-size: 31px; font-weight: 500; line-height: 1.2; letter-spacing: -1px; }
 .form-heading p { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }

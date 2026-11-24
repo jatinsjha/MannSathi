@@ -20,8 +20,8 @@ Columns: UUID `id`, `user_id` (unique foreign key to `auth.users`), `batch_code`
 
 RLS is enabled. There are no policies or table grants for `anon`/`authenticated` in the supplied export; only `postgres` and `service_role` have privileges. This denies student access and mutation, including self-approval. There is no current student request or teacher approval flow to reuse. Calendar does not change this table or depend on approved batch membership for private personal events.
 
-## New calendar proposal
+## Calendar migration and current status
 
 `database/migrations/001_smart_calendar.sql` adds the private event table, constraints, timestamps/immutability trigger, owner indexes, restricted column grants, and owner-only RLS. It does not add tasks, focus sessions, progress tables, teacher permissions, or AI actions.
 
-Both SQL scripts remain unapplied. Review them before running 000 then 001. After applying them, use two authenticated accounts to test direct PostgREST RLS as well as backend CRUD and persistence. Local transport and browser fixtures cannot verify live database policy enforcement.
+The user subsequently confirmed migrations 000/001 are applied. This document records the original baseline review; do not rerun those migrations. Task Manager adds migration 002 with administrator-managed teacher permissions, tasks, recipients and notifications; see [task-manager.md](task-manager.md). Migration 002 is still unapplied by the agent. Local PostgreSQL authorization tests and browser fixtures do not replace verification against deployed Supabase.
