@@ -7,7 +7,7 @@
     const types = { personal_task: "Personal task", homework: "Homework", assignment: "Assignment", practical: "Practical", examination_preparation: "Examination preparation", project: "Project", other: "Other" };
     const statuses = { pending: "Pending", in_progress: "In progress", completed: "Completed" };
     const priorities = { low: "Low", medium: "Medium", high: "High", urgent: "Urgent" }, rank = { low: 0, medium: 1, high: 2, urgent: 3 };
-    let context = null, tasks = [], notifications = [], editing = null, requestId = null;
+    let context = null, tasks = [], notifications = [], editing = null, requestId = null, enrollments = [];
     let epoch = 0, loadId = 0, loading = false, saving = false, notificationBusy = false, seen = null, notificationLoading = false;
     const dialog = $("task-dialog"), form = $("task-form"), notificationDialog = $("notifications-dialog");
     const isTeacher = () => context?.role === "teacher";
@@ -28,6 +28,10 @@
         $("tasks-list").replaceChildren(); $("notifications-list").replaceChildren();
         $("tasks-summary").textContent = ""; $("tasks-create").disabled = true; $("notifications-button").disabled = true;
         $("notifications-count").hidden = true; dialog.close(); $("task-delete-dialog").close(); notificationDialog.close();
+        enrollments = [];
+        $("teacher-roster-section").hidden = true;
+        $("enrollment-list").replaceChildren(); $("approved-roster-list").replaceChildren();
+        window.dispatchEvent(new CustomEvent("mannsathi:session-reset"));
     }
     function sessionFailure(error) {
         if (error.status !== 401 && error.status !== 403) return false;
@@ -36,19 +40,31 @@
     }
     async function initialize() {
         const current = epoch;
+        if (isTeacher()) {
+            $("roster-status").textContent = "Refreshing class roster…";
+            $("enrollment-list").querySelectorAll("button").forEach(button => { button.disabled = true; });
+        }
         try {
             const result = await service.context();
             if (current !== epoch) return;
             if (!["student", "teacher"].includes(result.role) || !result.user_id || !Array.isArray(result.batches) || !Array.isArray(result.students)) throw new Error("Could not verify your workspace access.");
             context = result;
+            $("teacher-roster-section").hidden = !isTeacher();
+            if (!isTeacher()) { enrollments = []; $("enrollment-list").replaceChildren(); $("approved-roster-list").replaceChildren(); }
+            window.dispatchEvent(new CustomEvent("mannsathi:context", { detail: result }));
             $("tasks-create").disabled = false; $("notifications-button").disabled = false;
             $("account-type").textContent = isTeacher() ? "Teacher account" : "Student account";
             $("tasks-role-note").textContent = isTeacher() ? "Assign work to your classes or an individual student." : "Your personal tasks and work assigned by your teachers.";
+            if (isTeacher()) await refreshRoster();
+            if (current !== epoch) return;
             await refreshNotifications();
+            if (current !== epoch) return;
             if (!panel.hidden) await load();
         } catch (error) {
             if (current !== epoch) return;
+            if (sessionFailure(error)) return;
             context = null; $("tasks-create").disabled = true; $("notifications-button").disabled = true;
+            $("teacher-roster-section").hidden = true;
             message(error.message, error.status !== 401);
             $("tasks-auth").hidden = error.status !== 401;
         }
@@ -104,7 +120,7 @@
             badges.append(element("span", "task-badge priority-" + task.priority, priorities[task.priority]), element("span", "task-badge", task.audience === "personal" ? "Personal" : "Teacher assigned"));
             if (overdue(task)) badges.append(element("span", "task-badge", "Overdue"));
             heading.append(badges); card.append(heading);
-            const details = [types[task.task_type], task.subject, task.due_at ? "Due " + labelDate(task.due_at) : "No deadline", task.estimated_minutes ? `${task.estimated_minutes} min estimated` : "", task.audience !== "personal" ? `Assigned by ${task.assigned_by || "your teacher"}${task.batch_id ? " · " + task.batch_id.toUpperCase() : ""}` : ""].filter(Boolean);
+            const details = [types[task.task_type], task.subject, task.due_at ? "Due " + labelDate(task.due_at) : "No deadline", task.estimated_minutes ? `${task.estimated_minutes} min estimated` : "", task.audience !== "personal" ? `Assigned by ${task.assigned_by || "your teacher"}${task.batch_id ? " · " + task.batch_id.toUpperCase() : ""}${task.target_division ? " · Division " + task.target_division : ""}` : ""].filter(Boolean);
             card.append(element("p", "task-meta", details.join(" · ")));
             if (task.description) card.append(element("p", "task-description", task.description));
             const actions = element("div", "task-actions");
@@ -132,17 +148,34 @@
         $("task-batch").disabled = !!editing || audience === "personal";
         $("task-student-field").hidden = audience !== "student";
         $("task-student").disabled = !!editing || audience !== "student";
+        $("task-division-field").hidden = audience !== "division";
+        $("task-division").disabled = !!editing || audience !== "division";
+        $("task-roster-filter-field").hidden = audience !== "student";
+        $("task-roster-division").disabled = !!editing || audience !== "student";
         $("task-status").disabled = !!editing || audience !== "personal";
         if (audience !== "personal" && !editing) $("task-status").value = "pending";
-        $("task-assignment-note").textContent = audience === "class" ? "Each approved student in this class will receive the task and a notification. Each student tracks their own progress." : audience === "student" ? "Only the selected student will receive this task and its notification." : "This task is private to your account.";
+        $("task-assignment-note").textContent = audience === "class" ? "Every approved student in this class will receive this task, across all divisions." : audience === "division" ? "Only approved students in the selected division will receive this task and a notification." : audience === "student" ? "Only the selected student will receive this task and its notification." : "This task is private to your account.";
         if (editing && audience !== "personal") $("task-assignment-note").textContent += " Recipients cannot be changed after assignment.";
+        updateRosterNote();
+    }
+    function studentsInClass(batch = $("task-batch").value) { return (context?.students || []).filter(student => student.batch_id === batch); }
+    function updateRosterNote() {
+        const audience = $("task-audience").value, students = studentsInClass();
+        const targets = audience === "division" ? students.filter(student => student.division === $("task-division").value) : audience === "student" ? students.filter(student => !$("task-roster-division").value || student.division === $("task-roster-division").value) : students;
+        $("task-roster-note").hidden = audience === "personal" || targets.length > 0;
+        $("task-roster-note").textContent = "No approved students in this selection. Students must save their class and division in Settings, then you can approve their requests in Class roster.";
+        if (!saving) $("task-save").disabled = !editing && audience !== "personal" && targets.length === 0;
+        for (const option of $("task-division").options) option.textContent = `${option.value} (${students.filter(student => student.division === option.value).length} students)`;
     }
     function fillStudents() {
         const target = $("task-student"); target.replaceChildren();
         const placeholder = element("option", "", "Select a student"); placeholder.value = ""; target.append(placeholder);
-        for (const student of context?.students || []) if (student.batch_id === $("task-batch").value) {
-            const option = element("option", "", `${student.full_name || "Student"} (${student.id.slice(-8)})`); option.value = student.id; target.append(option);
+        const filter = $("task-roster-division").value;
+        const students = studentsInClass().filter(student => !filter || student.division === filter).sort((a, b) => String(a.roll_number || a.full_name).localeCompare(String(b.roll_number || b.full_name), undefined, { numeric: true }));
+        for (const student of students) {
+            const option = element("option", "", `${student.roll_number ? student.roll_number + " · " : ""}${student.full_name || "Student"}${student.division ? " · Division " + student.division : " · Division not set"} (${student.id.slice(-8)})`); option.value = student.id; target.append(option);
         }
+        updateRosterNote();
     }
     function openTask(task = null) {
         if (!context || loading || saving || task && !canEdit(task)) return;
@@ -155,8 +188,10 @@
         $("task-assignment-fields").hidden = !isTeacher(); $("task-audience").disabled = !!task || !isTeacher();
         $("task-audience").value = task?.audience || (isTeacher() ? "class" : "personal");
         $("task-batch").replaceChildren();
-        for (const batch of context.batches) { const option = element("option", "", batch.label); option.value = batch.id; $("task-batch").append(option); }
+        for (const batch of context.batches) { const count = studentsInClass(batch.id).length; const option = element("option", "", `${batch.label} (${count} students)`); option.value = batch.id; $("task-batch").append(option); }
         if (task?.batch_id) $("task-batch").value = task.batch_id;
+        $("task-division").value = task?.target_division || "A";
+        $("task-roster-division").value = "";
         fillStudents(); if (task?.assigned_to) $("task-student").value = task.assigned_to;
         configureAudience(); $("task-delete").hidden = !task; $("task-form-error").textContent = "";
         $("task-zone-note").textContent = `Deadlines use ${Intl.DateTimeFormat().resolvedOptions().timeZone}. ${task ? "Change completion status from the task list." : ""}`;
@@ -175,14 +210,73 @@
             const audience = isTeacher() ? $("task-audience").value : "personal";
             if (audience !== "personal" && !$("task-batch").value) throw new Error("Choose one of your approved classes.");
             if (audience === "student" && !$("task-student").value) throw new Error("Select the student who should receive this task.");
-            Object.assign(data, { request_id: requestId, audience, batch_id: audience === "personal" ? null : $("task-batch").value, assigned_to: audience === "student" ? $("task-student").value : null, status: audience === "personal" ? $("task-status").value : "pending" });
+            const targets = audience === "division" ? studentsInClass().filter(student => student.division === $("task-division").value) : studentsInClass();
+            if (audience !== "personal" && !targets.length) throw new Error("There are no approved students in this selection. Review class enrollment requests first.");
+            Object.assign(data, { request_id: requestId, audience, batch_id: audience === "personal" ? null : $("task-batch").value, assigned_to: audience === "student" ? $("task-student").value : null, target_division: audience === "division" ? $("task-division").value : null, status: audience === "personal" ? $("task-status").value : "pending" });
         }
         return data;
+    }
+    async function refreshRoster() {
+        $("teacher-roster-section").hidden = !isTeacher();
+        if (!isTeacher()) return;
+        const current = epoch, previous = $("roster-class").value;
+        $("roster-class").replaceChildren();
+        for (const batch of context.batches) { const option = element("option", "", batch.label); option.value = batch.id; $("roster-class").append(option); }
+        if (context.batches.some(batch => batch.id === previous)) $("roster-class").value = previous;
+        $("roster-status").textContent = "Loading enrollment requests…";
+        try {
+            const result = await service.enrollments();
+            if (current !== epoch) return;
+            if (!Array.isArray(result.enrollments)) throw new Error("Could not load class enrollment requests.");
+            enrollments = result.enrollments;
+            $("roster-status").textContent = "Class roster is up to date.";
+        } catch (error) {
+            if (current !== epoch) return;
+            enrollments = [];
+            $("roster-status").textContent = error.message;
+            if (sessionFailure(error)) return;
+        }
+        if (current === epoch) renderRoster();
+    }
+    function renderRoster() {
+        if (!isTeacher()) return;
+        const batch = $("roster-class").value, students = studentsInClass(batch), pending = enrollments.filter(row => row.batch_id === batch);
+        $("roster-counts").textContent = `${students.length} approved · ${pending.length} pending · ` + ["A", "B", "C"].map(division => `${division}: ${students.filter(student => student.division === division).length}`).join(" · ");
+        $("roster-help").textContent = students.length ? "Approve only students who belong to your class. Division assignments use each student's approved division." : "No approved students yet. Ask students to open Settings → Student details, enter their roll number, class and division, and save. Their requests will appear below for your approval.";
+        $("approved-roster-list").replaceChildren(); $("enrollment-list").replaceChildren();
+        for (const student of students) {
+            const row = element("li", "roster-student"); row.dataset.rosterUser = student.id;
+            row.append(element("h4", "", student.full_name || "Student"), element("p", "", `${student.roll_number || "Roll number not set"} · ${batch.toUpperCase()} · ${student.division ? "Division " + student.division : "Division not set"}`));
+            $("approved-roster-list").append(row);
+        }
+        if (!students.length) $("approved-roster-list").append(element("li", "roster-empty", "There are no approved students in this class."));
+        for (const request of pending) {
+            const row = element("li", "enrollment-card"); row.dataset.enrollmentUser = request.user_id; row.dataset.enrollmentDivision = request.division || "";
+            row.append(element("h4", "", request.full_name || "Student"), element("p", "", `${request.roll_number || "Roll number not set"} · Division ${request.division || "not set"}${request.email ? " · " + request.email : ""}`));
+            const actions = element("div", "enrollment-actions");
+            for (const approve of [true, false]) {
+                const button = element("button", "task-button" + (approve ? "" : " task-danger"), approve ? "Approve" : "Reject"); button.type = "button";
+                button.dataset[approve ? "enrollmentApprove" : "enrollmentReject"] = request.user_id;
+                button.addEventListener("click", async () => {
+                    const current = epoch; actions.querySelectorAll("button").forEach(control => { control.disabled = true; });
+                    try {
+                        await service.approveEnrollment(request.user_id, batch, approve, request.division);
+                        if (current !== epoch) return;
+                        showToast(approve ? "Student enrolled in this class and division." : "Enrollment request rejected.");
+                        await initialize();
+                    } catch (error) { if (current === epoch) { $("roster-status").textContent = error.message; actions.querySelectorAll("button").forEach(control => { control.disabled = false; }); } }
+                });
+                actions.append(button);
+            }
+            row.append(actions); $("enrollment-list").append(row);
+        }
+        if (!pending.length) $("enrollment-list").append(element("li", "enrollment-empty", "No pending enrollment requests."));
     }
     function setBusy(value) {
         saving = value; form.querySelectorAll("button").forEach(button => { button.disabled = value; });
         $("task-delete-confirm").disabled = value; $("task-save").textContent = value ? "Saving…" : "Save task";
         form.setAttribute("aria-busy", String(value));
+        if (!value && context) updateRosterNote();
     }
     form.addEventListener("submit", async event => {
         event.preventDefault(); if (saving) return;
@@ -206,8 +300,12 @@
         } catch (error) { if (current === epoch) { $("task-delete-dialog").close(); if (!sessionFailure(error)) $("task-form-error").textContent = error.message; } }
         finally { setBusy(false); }
     });
-    $("task-audience").addEventListener("change", configureAudience);
+    $("task-audience").addEventListener("change", () => { configureAudience(); fillStudents(); });
     $("task-batch").addEventListener("change", fillStudents);
+    $("task-division").addEventListener("change", updateRosterNote);
+    $("task-roster-division").addEventListener("change", fillStudents);
+    $("roster-class").addEventListener("change", renderRoster);
+    $("roster-refresh").addEventListener("click", initialize);
     function renderNotifications(unread) {
         const badge = $("notifications-count"); badge.hidden = unread === 0; badge.textContent = unread > 99 ? "99+" : String(unread);
         $("notifications-button").setAttribute("aria-label", unread ? `Notifications, ${unread} unread` : "Notifications");
@@ -292,6 +390,7 @@
     $("tasks-search").addEventListener("input", render);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && !saving && !dialog.open) initialize(); });
     setInterval(() => { if (!document.hidden && context) refreshNotifications(); }, 30000);
+    window.MannSathiTasks = Object.freeze({ refresh: initialize, get context() { return context; } });
     resetPrivate();
     if (window.supabaseReady) window.supabaseReady.then(client => {
         let lastUser = null;

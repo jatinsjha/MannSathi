@@ -51,6 +51,26 @@ button.task-title:hover { color: var(--accent); }
 .task-assignment-fields { margin-top: 6px; padding: 16px 14px 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--accent-soft); }
 .task-form-note { margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .task-form-error { margin: 0; color: var(--error); font-size: 12px; line-height: 1.7; }
+.task-roster-note { margin: 0 0 14px; color: var(--secondary); font-size: 11px; line-height: 1.8; }
+.task-roster-note.is-empty { color: var(--gold); }
+.teacher-roster-section { margin: 0 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--accent-soft); }
+.roster-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.roster-header h2 { margin: 0 0 8px; color: var(--ink); font-size: 17px; font-weight: 500; }
+.roster-header p { max-width: 650px; margin: 0; color: var(--secondary); font-size: 12px; line-height: 1.8; }
+.roster-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.roster-controls select { min-width: 125px; min-height: 37px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--input); color: var(--ink); font-family: var(--sans); font-size: 12px; }
+.roster-counts { margin: 15px 0 7px; color: var(--secondary); font-size: 12px; line-height: 1.8; }
+.roster-status { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.roster-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; }
+.roster-columns > section { min-width: 0; }
+.roster-columns h3 { margin: 0 0 12px; color: var(--secondary); font-size: 13px; font-weight: 500; }
+.enrollment-list, .approved-roster-list { display: flex; flex-direction: column; gap: 9px; list-style: none; padding: 0; margin: 0; }
+.enrollment-card, .roster-student { padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); overflow-wrap: anywhere; }
+.enrollment-card h4, .roster-student h4 { margin: 0 0 6px; color: var(--ink); font-size: 13px; font-weight: 500; }
+.enrollment-card p, .roster-student p { margin: 0; color: var(--secondary); font-size: 11px; line-height: 1.8; }
+.enrollment-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.enrollment-actions .task-button { min-height: 34px; padding: 6px 10px; font-size: 11px; }
+.enrollment-empty, .roster-empty { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
 .task-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .task-form-actions .primary-button { width: auto; min-height: 39px; padding: 0 14px; font-size: 12px; }
 .task-form-actions .task-danger { margin-right: auto; }
@@ -68,3 +88,5 @@ button.task-title:hover { color: var(--accent); }
 @media (max-width: 1100px) { .tasks-toolbar { gap: 10px; } .tasks-search { flex-basis: 100%; } .tasks-filter { flex: 1 1 130px; } }
 @media (max-width: 760px) { .tasks-panel { padding: 12px 16px 26px; } .tasks-header { gap: 12px; margin-bottom: 20px; } .tasks-header h1 { font-size: 24px; } .tasks-header .primary-button { gap: 6px; padding: 0 11px; font-size: 11px; } .tasks-header .icon { width: 14px; height: 14px; } .tasks-filter { flex-basis: calc(50% - 10px); min-width: 0; } .tasks-toolbar input, .tasks-toolbar select { font-size: 16px; } .task-card { padding: 16px; } .task-heading { flex-direction: column; gap: 10px; } .task-title { font-size: 15px; } .task-dialog { padding: 22px; } .task-field input, .task-field textarea, .task-field select { font-size: 16px; } .task-field-row { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 @media (max-width: 360px) { .tasks-panel { padding-left: 10px; padding-right: 10px; } .tasks-header { flex-wrap: wrap; } .tasks-header h1 { font-size: 23px; } .task-button { padding-left: 9px; padding-right: 9px; font-size: 11px; } .task-status-select { font-size: 16px; } .topbar-right { gap: 2px; } }
+@media (max-width: 1000px) { .roster-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) { .teacher-roster-section { padding: 16px; } .roster-controls { width: 100%; } .roster-controls select { flex: 1; min-width: 0; font-size: 16px; } }

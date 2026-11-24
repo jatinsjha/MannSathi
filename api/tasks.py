@@ -7,7 +7,18 @@ from urllib.request import Request
 
 from api.shared import supabase
 from api.shared.supabase import ApiError, authenticate
-from api.shared.tasks_validation import create_payload, fields, identifier, status_payload
+from api.shared.tasks_validation import create_payload, enrollment_payload, fields, identifier, settings_payload, status_payload
+
+EMPTY_CLASS = "No approved students are enrolled in this class. Ask students to save their class and division in Settings, then approve their enrollment requests."
+EMPTY_DIVISION = "No approved students are enrolled in this division. Check the division roster and approve its pending enrollment requests."
+SAFE_VALIDATION_MESSAGES = {
+    "This class has no approved students to assign": EMPTY_CLASS,
+    "No approved students are enrolled in this class.": EMPTY_CLASS,
+    "No approved students are enrolled in this division.": EMPTY_DIVISION,
+    "Use a deadline with a timezone offset": "Choose a valid deadline with a timezone offset.",
+    "Invalid task deadline": "Choose a valid task deadline.",
+    "New assignments start as pending": "New teacher assignments must start as pending.",
+}
 
 
 def send_json(request, status, payload):
@@ -57,17 +68,23 @@ def rpc(user, name, payload=None):
                 raise ApiError(502, "Task response is too large. Please try again later.")
             return json.loads(raw)
     except HTTPError as exc:
+        detail = {}
         try:
             detail = json.loads(exc.read(65536))
             code = detail.get("code") if isinstance(detail, dict) else None
         except (ValueError, OSError):
             code = None
-        # Never return database messages, identifiers, event content, or secrets.
+        # Only map exact, known application messages. Never echo arbitrary database details.
         if code == "PT404":
             raise ApiError(404, "This task or notification is unavailable.") from None
         if code == "PT403":
             raise ApiError(403, "You do not have permission for this task, student, or class.") from None
-        if code == "PT400" or code in {"23514", "22007", "22P02"}:
+        if code == "PT409":
+            raise ApiError(409, "The enrollment request changed. Refresh before reviewing it.") from None
+        if code in {"PT400", "PT422"}:
+            message = SAFE_VALIDATION_MESSAGES.get(detail.get("message")) if isinstance(detail, dict) else None
+            raise ApiError(400, message or "This task change is invalid. Check its fields and recipients.") from None
+        if code in {"23514", "22007", "22P02"}:
             raise ApiError(400, "This task change is invalid. Check its fields and recipients.") from None
         if exc.code == 401 or code == "PT401":
             raise ApiError(401, "Please sign in again to use tasks.") from None
@@ -105,6 +122,22 @@ def checked_task(result, task_id=None, owner=None):
     return result
 
 
+def checked_settings(result):
+    if (not isinstance(result, dict) or result.get("role") not in {"student", "teacher"}
+            or not isinstance(result.get("profile"), dict)
+            or not isinstance(result.get("classes"), list)
+            or result.get("membership") is not None and not isinstance(result.get("membership"), dict)):
+        raise ApiError(502, "Your account settings could not be loaded. Please retry.")
+    return result
+
+
+def teacher_context(user, batch=None):
+    account = context(user)
+    if account["role"] != "teacher" or batch is not None and not any(item.get("id") == batch for item in account["batches"]):
+        raise ApiError(403, "Only an approved teacher for this class can review enrollment requests.")
+    return account
+
+
 def dispatch(request, method):
     try:
         if method not in {"GET", "POST", "PATCH", "DELETE"}:
@@ -121,6 +154,19 @@ def dispatch(request, method):
         if method == "GET":
             if action == "context":
                 send_json(request, 200, context(user))
+                return
+            if action == "settings":
+                send_json(request, 200, checked_settings(rpc(user, "settings")))
+                return
+            if action == "enrollments":
+                account = teacher_context(user)
+                result = rpc(user, "pending_enrollments")
+                rows = result.get("enrollments") if isinstance(result, dict) else result
+                batches = {item.get("id") for item in account["batches"]}
+                if (not isinstance(rows, list) or any(not isinstance(row, dict)
+                        or row.get("batch_id") not in batches for row in rows)):
+                    raise ApiError(502, "Enrollment requests could not be loaded. Please retry.")
+                send_json(request, 200, {"role": "teacher", "enrollments": rows})
                 return
             if action == "notifications":
                 result = rpc(user, "notifications")
@@ -156,8 +202,32 @@ def dispatch(request, method):
                             item.get("id") == payload["assigned_to"] and item.get("batch_id") == batch
                             for item in account["students"])):
                     raise ApiError(403, "You can assign work only to approved students in your classes.")
+                if payload["audience"] in {"class", "division"}:
+                    eligible = [item for item in account["students"] if item.get("batch_id") == batch]
+                    if payload["audience"] == "division":
+                        eligible = [item for item in eligible if item.get("division") == payload["target_division"]]
+                    if not eligible:
+                        raise ApiError(400, EMPTY_DIVISION if payload["audience"] == "division" else EMPTY_CLASS)
             result = checked_task(rpc(user, "create", {"p_request_id": request_id, "p_data": payload}), owner=user.user_id)
             send_json(request, 201, {"task": result})
+            return
+        if method == "PATCH" and action == "settings":
+            if "id" in query:
+                raise ApiError(400, "Account settings belong to the signed-in user; do not supply an owner ID.")
+            payload = settings_payload(body_json(request))
+            result = checked_settings(rpc(user, "save_settings", {"p_data": payload}))
+            send_json(request, 200, result)
+            return
+        if method == "PATCH" and action == "enrollment":
+            if "id" in query:
+                raise ApiError(400, "Send the student and approval decision in the enrollment request.")
+            payload = enrollment_payload(body_json(request))
+            teacher_context(user, payload["p_batch"])
+            result = rpc(user, "approve_enrollment", payload)
+            expected_status = "approved" if payload["p_approve"] else "rejected"
+            if not isinstance(result, dict) or result.get("updated") is not True or result.get("status") != expected_status:
+                raise ApiError(502, "The enrollment decision could not be confirmed. Please refresh.")
+            send_json(request, 200, result)
             return
         task_id = identifier(query.get("id"))
         if method == "DELETE":

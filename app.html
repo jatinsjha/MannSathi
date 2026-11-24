@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/workspace.css">
   <link rel="stylesheet" href="css/modules/calendar.css">
   <link rel="stylesheet" href="css/modules/tasks.css">
+  <link rel="stylesheet" href="css/modules/settings.css">
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
@@ -160,6 +161,18 @@
           <p id="tasks-summary" class="tasks-summary"></p>
           <div class="tasks-status-row"><p id="tasks-status" role="status" aria-live="polite"></p><button class="task-button" id="tasks-retry" type="button" hidden>Try again</button></div>
           <div class="tasks-auth" id="tasks-auth" hidden><h2>Sign in to use your tasks</h2><p>Your personal tasks and teacher assignments are saved to your account.</p><a class="primary-button" href="index.html">Student sign in</a></div>
+          <section class="teacher-roster-section" id="teacher-roster-section" aria-labelledby="teacher-roster-heading" hidden>
+            <div class="roster-header">
+              <div><h2 id="teacher-roster-heading">Class roster</h2><p id="roster-help">Students appear here after saving their class and division in Settings. Review their enrollment requests before assigning class work.</p></div>
+              <div class="roster-controls"><label class="sr-only" for="roster-class">Class roster</label><select id="roster-class"></select><button class="task-button" id="roster-refresh" type="button">Refresh roster</button></div>
+            </div>
+            <p class="roster-counts" id="roster-counts"></p>
+            <p class="roster-status" id="roster-status" role="status" aria-live="polite"></p>
+            <div class="roster-columns">
+              <section aria-labelledby="enrollment-heading"><h3 id="enrollment-heading">Pending enrollment requests</h3><ul class="enrollment-list" id="enrollment-list" aria-label="Pending enrollment requests"></ul></section>
+              <section aria-labelledby="approved-roster-heading"><h3 id="approved-roster-heading">Approved students</h3><ul class="approved-roster-list" id="approved-roster-list" aria-label="Approved class roster"></ul></section>
+            </div>
+          </section>
           <ul class="tasks-list" id="tasks-list" aria-label="Your tasks"></ul>
           <p class="task-empty" id="tasks-empty" hidden>No tasks match these filters.</p>
         </section>
@@ -181,15 +194,47 @@
       </main>
     </div>
   </div>
-  <dialog class="cosmic-dialog" id="settings-dialog" aria-labelledby="settings-title">
+  <dialog class="cosmic-dialog settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
     <div class="dialog-top"><h2 id="settings-title">Settings</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close settings"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
-    <p>Appearance</p>
-    <div class="theme-choices" role="group" aria-label="Appearance">
-      <button type="button" data-theme-choice="dark" aria-pressed="true"><span class="theme-swatch midnight"></span><strong>Dark</strong></button>
-      <button type="button" data-theme-choice="light" aria-pressed="false"><span class="theme-swatch dawn"></span><strong>Light</strong></button>
-    </div>
-    <p class="settings-note">Chats are saved in this browser.</p>
-    <button class="dialog-text-button" id="settings-clear-history" type="button">Clear chat history</button>
+    <nav class="settings-tabs" aria-label="Settings sections">
+      <button type="button" data-settings-tab="appearance" aria-pressed="true" aria-controls="settings-appearance-panel">Appearance</button>
+      <button type="button" data-settings-tab="profile" aria-pressed="false" aria-controls="settings-profile-panel">Student details</button>
+      <button type="button" data-settings-tab="account" aria-pressed="false" aria-controls="settings-account-panel">Account</button>
+    </nav>
+    <section class="settings-section" id="settings-appearance-panel" data-settings-panel="appearance" aria-labelledby="settings-appearance-title">
+      <h3 id="settings-appearance-title">Appearance</h3>
+      <div class="theme-choices" role="group" aria-label="Appearance">
+        <button type="button" data-theme-choice="dark" aria-pressed="true"><span class="theme-swatch midnight"></span><strong>Dark</strong></button>
+        <button type="button" data-theme-choice="light" aria-pressed="false"><span class="theme-swatch dawn"></span><strong>Light</strong></button>
+      </div>
+      <p class="settings-note">Chats are saved in this browser.</p>
+      <button class="dialog-text-button" id="settings-clear-history" type="button">Clear chat history</button>
+    </section>
+    <section class="settings-section" id="settings-profile-panel" data-settings-panel="profile" aria-labelledby="settings-profile-title" hidden>
+      <h3 id="settings-profile-title">Student details</h3>
+      <p class="settings-help" id="profile-access-note">Sign in with a student account to save your details and request class enrollment.</p>
+      <div id="student-profile-section" hidden>
+        <form id="student-profile-form">
+          <div class="settings-field"><label for="profile-name">Full name</label><input id="profile-name" name="full_name" type="text" minlength="2" maxlength="100" autocomplete="name" required></div>
+          <div class="settings-field"><label for="profile-roll">Roll number</label><input id="profile-roll" name="roll_number" type="text" maxlength="30" autocomplete="off" required></div>
+          <div class="settings-field-row">
+            <div class="settings-field"><label for="profile-class">Class</label><select id="profile-class" name="class_code" required></select></div>
+            <div class="settings-field"><label for="profile-division">Division</label><select id="profile-division" name="division" required><option value="">Select a division</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+          </div>
+          <p class="settings-membership-status" id="profile-membership-status" role="status" aria-live="polite"></p>
+          <p class="settings-help">Class and division changes require teacher approval. Saving your details sends an enrollment request to teachers of that class.</p>
+          <p class="settings-form-error" id="profile-form-error" role="alert"></p>
+          <div class="settings-actions"><button class="primary-button" id="profile-save" type="submit">Save details</button></div>
+        </form>
+      </div>
+    </section>
+    <section class="settings-section" id="settings-account-panel" data-settings-panel="account" aria-labelledby="settings-account-title" hidden>
+      <h3 id="settings-account-title">Account</h3>
+      <dl class="settings-account-details"><div><dt>Email</dt><dd id="settings-account-email">Sign in to view your account.</dd></div><div><dt>Account type</dt><dd id="settings-account-role">Guest</dd></div></dl>
+      <button class="task-button" id="settings-password-reset" type="button" disabled>Send password reset email</button>
+      <p class="settings-help">Account access is managed by your college. Changing student details does not grant teacher permissions.</p>
+      <p class="settings-account-status" id="settings-account-status" role="status" aria-live="polite"></p>
+    </section>
   </dialog>
   <dialog class="cosmic-dialog breathing-dialog" id="breathing-dialog" aria-labelledby="breathing-title">
     <div class="dialog-top"><h2 id="breathing-title">Breathing exercise</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close breathing exercise"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
@@ -252,10 +297,13 @@
       </div>
       <div class="task-assignment-fields" id="task-assignment-fields" hidden>
         <div class="task-field-row">
-          <div class="task-field"><label for="task-audience">Assign to</label><select id="task-audience" name="audience"><option value="personal">Myself</option><option value="class">Everyone in a class</option><option value="student">One student</option></select></div>
+          <div class="task-field"><label for="task-audience">Assign to</label><select id="task-audience" name="audience"><option value="personal">Myself</option><option value="class">Everyone in a class</option><option value="division">One division</option><option value="student">One student</option></select></div>
           <div class="task-field"><label for="task-batch">Class</label><select id="task-batch" name="batch_id"></select></div>
         </div>
+        <div class="task-field" id="task-division-field" hidden><label for="task-division">Division</label><select id="task-division" name="target_division"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+        <div class="task-field" id="task-roster-filter-field" hidden><label for="task-roster-division">Filter students by division</label><select id="task-roster-division"><option value="">All divisions</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
         <div class="task-field" id="task-student-field" hidden><label for="task-student">Student</label><select id="task-student" name="assigned_to"></select></div>
+        <p class="task-roster-note" id="task-roster-note">Only approved students receive assignments. Students can save their details and request enrollment from Settings.</p>
         <p class="task-form-note" id="task-assignment-note"></p>
       </div>
       <p class="task-form-note" id="task-zone-note"></p>
@@ -285,5 +333,6 @@
   <script src="js/workspace.js"></script>
   <script src="js/modules/calendar.js"></script>
   <script src="js/modules/tasks.js"></script>
+  <script src="js/modules/settings.js"></script>
 </body>
 </html>

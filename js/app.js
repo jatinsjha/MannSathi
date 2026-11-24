@@ -21,6 +21,7 @@ let isBusy = false;
 let toastTimer;
 let breathingTimer;
 let sidebarReturnFocus;
+let savedProfileName = null, savedProfileRole = null;
 
 function loadChats() {
     try {
@@ -150,10 +151,21 @@ function setUser(name, guest = false) {
     try {
         if (!window.supabaseReady) { setUser("Guest", true); return; }
         const { data: { user } } = await (await window.supabaseReady).auth.getUser();
-        if (user) setUser(user.user_metadata?.full_name || user.email?.split("@")[0] || "Student");
+        if (user) {
+            setUser(savedProfileName || user.user_metadata?.full_name || user.email?.split("@")[0] || "Student");
+            if (savedProfileRole) document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
+        }
         else setUser("Guest", true);
     } catch { setUser("Guest", true); }
 })();
+window.addEventListener("mannsathi:profile", event => {
+    if (new URLSearchParams(location.search).get("guest") === "true") return;
+    if (typeof event.detail?.full_name !== "string" || !["student", "teacher"].includes(event.detail?.role)) return;
+    savedProfileName = event.detail.full_name; savedProfileRole = event.detail.role;
+    setUser(savedProfileName);
+    document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
+});
+window.addEventListener("mannsathi:session-reset", () => { savedProfileName = null; savedProfileRole = null; });
 function showToast(text) {
     toast.textContent = text;
     toast.classList.add("show");

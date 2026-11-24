@@ -6,6 +6,8 @@ Built with a simple web interface and the Google Gemini API, MannSathi encourage
 
 The full-screen student workspace includes Smart Calendar and Task Manager, independently of Gemini. Task Manager supports personal tasks, teacher assignments to a class or individual student, private completion tracking and persistent assignment notifications. Students and teachers have separate sign-in pages with backend role verification. See [the Task Manager deployment and onboarding guide](docs/task-manager.md) and [the Calendar guide](docs/smart-calendar.md). Focus Room and Student Progress remain future modules.
 
+Students can now save name, roll number, 25CS class and division A/B/C in Settings. Teachers review enrollment requests and assign work to all 25CS, one division or one student. The empty-roster error is explained and prevented. Existing installations need only migration 003 for this update; see [the student/division upgrade guide](docs/student-divisions.md).
+
 **Live Demo:** https://mannsathi.vercel.app
 
 ## Features
