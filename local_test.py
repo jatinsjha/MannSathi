@@ -3,6 +3,7 @@
 Serves the static pages and routes:
   POST /api/chat   -> api/chat.py
   GET  /api/config -> api/config.py
+  GET/POST/PATCH/DELETE /api/calendar -> api/calendar.py
 Reads GEMINI_API_KEY / GEMINI_MODEL / SUPABASE_* from a .env file in this folder.
 """
 import os
@@ -23,10 +24,13 @@ if os.path.exists(env_path):
 
 from api.chat import handler as ChatHandler  # noqa: E402
 from api.config import handler as ConfigHandler  # noqa: E402
+from api.calendar import dispatch as calendar_dispatch  # noqa: E402
 
 
 class LocalHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
+        if self.path.split("?")[0] == "/api/calendar":
+            return calendar_dispatch(self, "POST")
         if self.path.split("?")[0] == "/api/chat":
             return ChatHandler.do_POST(self)
         self.send_error(404)
@@ -36,11 +40,28 @@ class LocalHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         clean_path = self.path.split("?")[0]
+        if clean_path == "/api/calendar":
+            return calendar_dispatch(self, "GET")
         if clean_path == "/api/chat":
             return ChatHandler.do_GET(self)
         if clean_path == "/api/config":
             return ConfigHandler.do_GET(self)
         return super().do_GET()
+
+    def do_PATCH(self):
+        if self.path.split("?")[0] == "/api/calendar":
+            return calendar_dispatch(self, "PATCH")
+        self.send_error(404)
+
+    def do_DELETE(self):
+        if self.path.split("?")[0] == "/api/calendar":
+            return calendar_dispatch(self, "DELETE")
+        self.send_error(404)
+
+    def do_PUT(self):
+        if self.path.split("?")[0] == "/api/calendar":
+            return calendar_dispatch(self, "PUT")
+        self.send_error(404)
 
 
 if __name__ == "__main__":

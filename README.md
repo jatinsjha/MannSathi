@@ -4,6 +4,8 @@ MannSathi is an AI-powered student well-being companion designed to help student
 
 Built with a simple web interface and the Google Gemini API, MannSathi encourages students to express what is on their mind and offers concise, practical suggestions to help them take the next step.
 
+Smart Calendar is the first student workspace module: month/week/day views, personal event CRUD, all-day events, schedule summaries, and saved reminder preferences. It uses Supabase persistence independently of Gemini. Review [the calendar architecture, proposed SQL, security findings, and deployment guide](docs/smart-calendar.md) before enabling it. The database migration is not applied automatically. Task Manager, Focus Room, and Student Progress await separate approval.
+
 **Live Demo:** https://mannsathi.vercel.app
 
 ## Features
@@ -85,9 +87,13 @@ Copy `.env.example` to `.env` in the project root and fill it in:
 ```dotenv
 GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-3.5-flash-lite
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_supabase_publishable_or_anon_key
 ```
 
 Replace the placeholder with your own API key.
+
+Use only a Supabase publishable or legacy anon key as `SUPABASE_KEY`; `/api/config` rejects secret/service-role keys. Review the read-only schema findings and approve the proposed `database/migrations/000_profile_privileges.sql` (profile grants) and `database/migrations/001_smart_calendar.sql` (calendar) before applying them in that order. Rerun `database/inspect_calendar_schema.sql` if your schema has changed. See the calendar guide for constraints, policies, and two-account verification.
 
 **Never commit `.env`, `.env.local`, or API keys to GitHub.**
 
@@ -106,10 +112,10 @@ MannSathi is deployed on Vercel.
 To deploy your own instance:
 
 1. Import the repository through Vercel and keep the Root Directory set to the repository root.
-2. Configure `GEMINI_API_KEY` and `GEMINI_MODEL` in the project's Environment Variables.
-3. Deploy the project and test the homepage, `/app.html`, and `POST /api/chat`.
+2. Configure `GEMINI_API_KEY`, `GEMINI_MODEL`, `SUPABASE_URL`, and a publishable/anon `SUPABASE_KEY` in the project's Environment Variables.
+3. Review and apply the calendar migration only after checking the live schema. Deploy the project and test the homepage, `/app.html`, `POST /api/chat`, and authenticated CRUD at `/api/calendar`.
 
-Vercel serves the static pages and files directly and deploys `api/chat.py` as the Python function at `/api/chat`; no custom build or rewrite rules are needed.
+Vercel serves the static pages and files directly and deploys the Python handlers at `/api/chat`, `/api/config`, and `/api/calendar`; no frontend build or rewrite rules are introduced. Install the updated Python requirements, including IANA timezone data.
 
 ## Project Structure
 
