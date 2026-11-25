@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">A smiling panda in a rose jumper</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#fce8f0"/><stop offset="1" stop-color="#edcadc"/></linearGradient><linearGradient id="fur" x2="0" y2="1"><stop stop-color="#fffdf5"/><stop offset="1" stop-color="#e9e6df"/></linearGradient></defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/><circle cx="167" cy="104" r="4" fill="#fff" opacity=".7"/><path d="m30 42 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff" opacity=".8"/>
+  <ellipse cx="100" cy="200" rx="66" ry="52" fill="#be7e9b"/>
+  <circle cx="51" cy="62" r="23" fill="#4c4850"/><circle cx="149" cy="62" r="23" fill="#4c4850"/><circle cx="51" cy="62" r="12" fill="#706773"/><circle cx="149" cy="62" r="12" fill="#706773"/>
+  <path d="M100 45c38 0 61 25 61 60v16c0 30-28 49-61 49s-61-19-61-49v-16c0-35 23-60 61-60Z" fill="url(#fur)" stroke="#b9acae" stroke-width="3"/>
+  <ellipse cx="72" cy="107" rx="17" ry="23" transform="rotate(22 72 107)" fill="#59515e"/><ellipse cx="128" cy="107" rx="17" ry="23" transform="rotate(-22 128 107)" fill="#59515e"/>
+  <ellipse cx="73" cy="106" rx="6" ry="8" fill="#252431"/><ellipse cx="127" cy="106" rx="6" ry="8" fill="#252431"/><circle cx="75" cy="103" r="2.5" fill="#fff"/><circle cx="129" cy="103" r="2.5" fill="#fff"/>
+  <ellipse cx="60" cy="134" rx="12" ry="6" fill="#df9fae" opacity=".7"/><ellipse cx="140" cy="134" rx="12" ry="6" fill="#df9fae" opacity=".7"/>
+  <path d="M92 128q8-4 16 0-1 10-8 10t-8-10Z" fill="#59515e"/><path d="M100 138v5m0 0q-7 9-15 1m15-1q7 9 15 1" fill="none" stroke="#77707a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M65 161q35 16 70 0l-4 18q-31 15-62 0Z" fill="#d9a0b8"/><path d="m94 189 6-5 6 5-6 7Z" fill="#ffe1ec"/>
+</svg>

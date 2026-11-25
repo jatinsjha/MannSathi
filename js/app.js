@@ -17,6 +17,7 @@ const KEY = "mannsathi_chats";
 const conversation = [];
 let currentChatId = null;
 let userInitial = "S";
+let avatarUserId = "guest";
 let isBusy = false;
 let toastTimer;
 let breathingTimer;
@@ -70,6 +71,7 @@ function deleteChat(id) {
 }
 function loadChat(id) {
     if (!canNavigate()) return;
+    window.MannSathiWorkspace?.show("chat");
     saveCurrentChat();
     const chat = loadChats().find(c => c.id === id);
     if (!chat) return;
@@ -136,10 +138,13 @@ function renderHistory() {
         });
     });
 }
-function setUser(name, guest = false) {
+function setUser(name, guest = false, userId = avatarUserId) {
     userInitial = name.charAt(0).toUpperCase();
     sidebarUsername.textContent = name;
     userAvatarEl.textContent = userInitial;
+    avatarUserId = guest ? "guest" : userId;
+    window.MannSathiAvatars?.paint(userAvatarEl, avatarUserId);
+    document.querySelectorAll(".message.user .msg-avatar").forEach(element => window.MannSathiAvatars?.paint(element, avatarUserId));
     document.getElementById("account-type").textContent = guest ? "Guest mode" : "Personal account";
     const signout = document.getElementById("sidebar-signout");
     signout.setAttribute("aria-label", guest ? "Back to sign in" : "Sign out");
@@ -152,7 +157,7 @@ function setUser(name, guest = false) {
         if (!window.supabaseReady) { setUser("Guest", true); return; }
         const { data: { user } } = await (await window.supabaseReady).auth.getUser();
         if (user) {
-            setUser(savedProfileName || user.user_metadata?.full_name || user.email?.split("@")[0] || "Student");
+            setUser(savedProfileName || user.user_metadata?.full_name || user.email?.split("@")[0] || "Student", false, user.id);
             if (savedProfileRole) document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
         }
         else setUser("Guest", true);
@@ -165,7 +170,16 @@ window.addEventListener("mannsathi:profile", event => {
     setUser(savedProfileName);
     document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
 });
-window.addEventListener("mannsathi:session-reset", () => { savedProfileName = null; savedProfileRole = null; });
+window.addEventListener("mannsathi:session-reset", () => {
+    savedProfileName = null; savedProfileRole = null;
+    setUser("Guest", true);
+});
+window.addEventListener("mannsathi:context", event => {
+    if (!event.detail?.user_id) return;
+    savedProfileRole = event.detail.role;
+    setUser(sidebarUsername.textContent === "Guest" ? savedProfileRole === "teacher" ? "Teacher" : "Student" : sidebarUsername.textContent, false, event.detail.user_id);
+    document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
+});
 function showToast(text) {
     toast.textContent = text;
     toast.classList.add("show");
@@ -206,6 +220,7 @@ function renderMessage(role, text, error = false) {
     wrap.className = "message " + role + (error ? " error" : "");
     if (role === "user") {
         wrap.innerHTML = `<div class="msg-avatar">${escHtml(userInitial)}</div><div class="msg-content"><div class="msg-meta">You</div><div class="msg-bubble">${escHtml(text)}</div></div>`;
+        window.MannSathiAvatars?.paint(wrap.querySelector(".msg-avatar"), avatarUserId);
     } else {
         wrap.innerHTML = `<div class="msg-avatar"><img src="images/logo.png" alt="" width="32" height="32"></div><div class="msg-content"><div class="msg-label">${error ? "Connection error" : "MannSathi"}</div><div class="msg-body">${formatReply(text)}</div></div>`;
         if (error) {
@@ -306,6 +321,7 @@ async function requestReply() {
 function send(rawText) {
     const text = rawText.trim();
     if (!text || isBusy) return;
+    if (window.MannSathiWorkspace && !window.MannSathiWorkspace.show("chat")) return;
     if (text.length > 4000) { showToast("Keep your message under 4,000 characters."); return; }
     messages.querySelectorAll(".message.error").forEach(el => el.remove());
     renderMessage("user", text);
@@ -317,6 +333,7 @@ function send(rawText) {
 }
 function clearConversation(save = true) {
     if (!canNavigate()) return;
+    window.MannSathiWorkspace?.show("chat");
     if (save) saveCurrentChat();
     currentChatId = null;
     conversation.length = 0;
@@ -337,6 +354,9 @@ function openSidebar() {
     document.getElementById("mobile-menu").setAttribute("aria-expanded", "true");
     if (window.innerWidth <= 760) document.getElementById("main-panel").inert = true;
     document.getElementById("sidebar-close").focus();
+    requestAnimationFrame(() => {
+        if (sidebar.classList.contains("open") && !sidebar.contains(document.activeElement)) document.getElementById("sidebar-close").focus();
+    });
 }
 function closeSidebar() {
     const wasOpen = sidebar.classList.contains("open");
@@ -354,7 +374,7 @@ document.getElementById("mobile-menu").addEventListener("click", openSidebar);
 document.getElementById("sidebar-close").addEventListener("click", closeSidebar);
 backdrop.addEventListener("click", closeSidebar);
 document.getElementById("new-chat").addEventListener("click", () => clearConversation());
-document.getElementById("space-home").addEventListener("click", () => clearConversation());
+document.getElementById("space-home").addEventListener("click", () => window.MannSathiWorkspace?.show("dashboard"));
 document.getElementById("sidebar-search-btn").addEventListener("click", e => {
     historySearch.hidden = !historySearch.hidden;
     e.currentTarget.setAttribute("aria-expanded", String(!historySearch.hidden));

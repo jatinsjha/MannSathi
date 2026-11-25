@@ -42,7 +42,7 @@ const server = http.createServer(async (req, res) => {
     const owner = { 'Bearer test-A': 'A', 'Bearer test-B': 'B' }[req.headers.authorization];
     requests.push({ method: req.method, owner, query: Object.fromEntries(url.searchParams), body: raw ? JSON.parse(raw) : null });
     if (!owner || expired) { json(res, 401, { error: 'Your session has expired. Sign in again.' }); return; }
-    if (req.method === 'GET') { json(res, 200, { events: [...records.values()].filter(event => event.user_id === owner) }); return; }
+    if (req.method === 'GET') { json(res, 200, { events: url.searchParams.get('action') === 'exams' ? [] : [...records.values()].filter(event => event.user_id === owner) }); return; }
     const id = url.searchParams.get('id'), existing = records.get(id);
     if (req.method === 'POST') {
       const event = { ...JSON.parse(raw), id: 'event-' + ++sequence, user_id: owner, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
@@ -162,9 +162,15 @@ async function checkLayout(width, height) {
   await click('#sidebar-signout'); await waitFor('location.pathname === "/index.html" && document.readyState === "complete" && !!document.getElementById("login-form")'); await fill({ email: 'a@example.test', password: 'test-password' }); await evaluate('document.getElementById("login-form").requestSubmit()'); await waitFor('location.pathname === "/app.html" && document.readyState === "complete" && !!window.MannSathiCalendarService && !!document.getElementById("open-calendar")'); await delay(100); await openCalendar(); assert.match(await evaluate('document.getElementById("calendar-grid").textContent'), /Updated lecture/);
   expired = true; await click('#calendar-refresh'); await waitFor('!document.getElementById("calendar-auth").hidden'); assert.equal(await evaluate('document.querySelectorAll("#calendar-grid .calendar-event").length'), 0); assert.equal(await evaluate('document.getElementById("calendar-create").disabled'), true);
   expired = false; await click('#calendar-refresh'); await calendarReady(); offline = true; await click('#calendar-refresh'); await waitFor('!document.getElementById("calendar-retry").hidden'); assert.match(await evaluate('document.getElementById("calendar-status").textContent'), /connection|reach/); offline = false; await click('#calendar-retry'); await calendarReady();
-  await navigate('app.html?guest=true'); await click('#open-calendar'); await waitFor('!document.getElementById("calendar-auth").hidden'); assert.equal(await evaluate('document.getElementById("calendar-create").disabled'), true); await click('#open-chat'); await fill({ 'message-input': 'Hello from guest' }); await evaluate('document.getElementById("chat-form").requestSubmit()'); await waitFor('!!document.querySelector(".message.assistant")'); assert.match(await evaluate('document.querySelector(".message.assistant").textContent'), /Chat still works/);
+  await navigate('app.html?guest=true'); await click('#open-calendar'); await waitFor('!document.getElementById("calendar-auth").hidden'); assert.equal(await evaluate('document.getElementById("calendar-create").disabled'), true); await click('#open-chat'); await fill({ 'message-input': 'Hello from guest' }); await evaluate('document.getElementById("chat-form").requestSubmit()'); await waitFor('!!document.querySelector(".message.assistant .msg-body")'); assert.match(await evaluate('document.querySelector(".message.assistant").textContent'), /Chat still works/);
+  await click('#open-calendar'); await waitFor('!document.getElementById("calendar-auth").hidden'); await click('#new-chat');
+  assert.equal(await evaluate('!document.getElementById("chat-area").hidden && document.getElementById("calendar-panel").hidden'), true, 'New chat returns from Calendar to Chat');
+  await click('#open-calendar'); await waitFor('!document.getElementById("calendar-auth").hidden');
+  await evaluate('[...document.querySelectorAll(".chat-item-open")].find(button=>button.textContent.includes("Hello from guest")).click()');
+  assert.equal(await evaluate('!document.getElementById("chat-area").hidden && document.getElementById("calendar-panel").hidden'), true, 'History returns from Calendar to Chat');
+  assert.match(await evaluate('document.getElementById("messages").textContent'), /Hello from guest.*Chat still works/s, 'Saved conversation restored');
   assert.equal(pageErrors.length, 0, 'Unhandled JavaScript exceptions: ' + JSON.stringify(pageErrors));
-  console.log('PASS responsive layouts and dialogs (1440/390/320), light/dark themes, account isolation, logout/login persistence, expired auth, offline recovery and guest chat');
+  console.log('PASS responsive layouts and dialogs (1440/390/320), light/dark themes, account isolation, logout/login persistence, expired auth, offline recovery, guest chat, New chat and history navigation');
   console.log('Calendar browser tests passed. Screenshots: ' + output);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
   if (ws) { try { await command('Browser.close', {}, null); } catch {} ws.close(); }

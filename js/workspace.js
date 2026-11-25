@@ -1,8 +1,8 @@
 /* Shared view navigation keeps workspace panels mutually exclusive. */
 (function () {
     "use strict";
-    let current = "chat";
-    const panels = { chat: "chat-area", calendar: "calendar-panel", tasks: "tasks-panel", focus: "focus-panel" };
+    let current = "dashboard";
+    const panels = { dashboard: "dashboard-panel", chat: "chat-area", calendar: "calendar-panel", tasks: "tasks-panel", focus: "focus-panel" };
     function show(view) {
         if (!panels[view] || (typeof canNavigate === "function" && !canNavigate())) return false;
         for (const [name, id] of Object.entries(panels)) {
@@ -13,7 +13,7 @@
         document.querySelector(".composer-wrap").hidden = view !== "chat";
         document.getElementById("conversation-title").hidden = view !== "chat";
         const skip = document.querySelector(".skip-link");
-        skip.href = "#" + ({ chat: "message-input", calendar: "calendar-create", tasks: "tasks-create", focus: "focus-start" })[view];
+        skip.href = "#" + ({ dashboard: "dashboard-heading", chat: "message-input", calendar: "calendar-create", tasks: "tasks-create", focus: "focus-start" })[view];
         skip.textContent = "Skip to " + view;
         current = view;
         if (typeof closeSidebar === "function") closeSidebar();
@@ -21,4 +21,18 @@
         return true;
     }
     window.MannSathiWorkspace = Object.freeze({ show, get current() { return current; } });
+    const card = document.querySelector(".app-card"), toggle = document.getElementById("sidebar-toggle");
+    function collapseSidebar(collapsed) {
+        card.classList.toggle("sidebar-collapsed", collapsed);
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+        toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+    }
+    try { collapseSidebar(localStorage.getItem("mannsathi-sidebar-collapsed") === "true"); } catch { collapseSidebar(false); }
+    toggle.addEventListener("click", () => {
+        const collapsed = !card.classList.contains("sidebar-collapsed");
+        collapseSidebar(collapsed);
+        try { localStorage.setItem("mannsathi-sidebar-collapsed", String(collapsed)); } catch { /* Still works when browser storage is disabled. */ }
+    });
+    document.getElementById("open-dashboard").addEventListener("click", () => show("dashboard"));
 })();

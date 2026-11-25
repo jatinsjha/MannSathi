@@ -10,6 +10,7 @@
     let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     let selected = dates.dateKey(), view = "month", events = [], editing = null;
     let generation = 0, saving = false, loading = false, ready = false;
+    let account = null, examMode = false, readOnly = false;
     const formatter = options => new Intl.DateTimeFormat(undefined, options);
     const formatDate = key => formatter({ year: "numeric", month: "short", day: "numeric" }).format(dates.parseDate(key));
     const formatTime = instant => formatter({ hour: "numeric", minute: "2-digit" }).format(new Date(instant));
@@ -29,11 +30,16 @@
     }
     function setEnabled(value) {
         $("calendar-create").disabled = !value || loading;
+        if ($("calendar-assign-exam")) {
+            $("calendar-assign-exam").hidden = account?.role !== "teacher";
+            $("calendar-assign-exam").disabled = !value || loading;
+        }
         ready = value;
     }
     function clearPrivateData() {
         generation++;
         events = [];
+        account = null;
         setEnabled(false);
         $("calendar-grid").replaceChildren();
         $("calendar-today-list").replaceChildren();
@@ -43,7 +49,7 @@
     }
     function showCalendar() {
         if (!window.MannSathiWorkspace.show("calendar")) return;
-        load();
+        return load();
     }
     function showChat() {
         window.MannSathiWorkspace.show("chat");
@@ -60,15 +66,24 @@
         render();
         status("Loading your calendar…");
         try {
+            let examWarning = "";
+            const exams = (start, end) => service.listExams ? service.listExams(start, end, timeZone).catch(error => {
+                if (error.status === 401) throw error;
+                examWarning = error.message || "Assigned exams could not be loaded.";
+                return [];
+            }) : Promise.resolve([]);
             const results = await Promise.all([
                 service.list(range.start, range.end, timeZone),
-                service.list(today, dates.addDays(today, 31), timeZone)
+                service.list(today, dates.addDays(today, 31), timeZone),
+                exams(range.start, range.end), exams(today, dates.addDays(today, 31)),
+                window.MannSathiTaskService?.context().catch(() => null) || Promise.resolve(null)
             ]);
             if (current !== generation) return;
-            events = [...new Map(results.flat().map(event => [event.id, event])).values()];
+            account = results[4];
+            events = [...new Map(results.slice(0, 4).flat().map(event => [event.id, event])).values()];
             setEnabled(true);
             render();
-            status(events.length ? "Calendar is up to date." : "No events yet. Create your first event.");
+            status(examWarning || (events.length ? "Calendar is up to date." : "No events yet. Create your first event."), !!examWarning);
         } catch (error) {
             if (current !== generation) return;
             events = [];
@@ -79,6 +94,7 @@
             if (current === generation) {
                 loading = false;
                 $("calendar-create").disabled = !ready;
+                if ($("calendar-assign-exam")) $("calendar-assign-exam").disabled = !ready;
                 $("calendar-content").setAttribute("aria-busy", "false");
             }
         }
@@ -94,12 +110,12 @@
     }
     function eventButton(event, key, compact = false) {
         const conflict = events.some(other => other.id !== event.id && dates.overlaps(event, other));
-        const button = node("button", "calendar-event" + (conflict ? " is-overlapping" : ""));
+        const button = node("button", "calendar-event" + (conflict ? " is-overlapping" : "") + (event.source === "teacher_exam" ? " is-assigned-exam" : ""));
         button.type = "button";
         button.dataset.eventId = event.id;
         button.append(node("span", "calendar-event-time", eventLabel(event, key, compact)), node("span", "calendar-event-title", event.title));
         if (!compact) {
-            const details = [categories[event.category] || "Other", event.location, conflict ? "Overlaps another event" : ""].filter(Boolean);
+            const details = [event.source === "teacher_exam" ? "Teacher assigned exam" : categories[event.category] || "Other", event.location, conflict ? "Overlaps another event" : ""].filter(Boolean);
             button.append(node("span", "calendar-event-meta", details.join(" · ")));
         }
         button.title = `${event.title} · ${eventLabel(event, key, false)}${conflict ? " · Overlaps another event" : ""}`;
@@ -156,14 +172,31 @@
         ["event-start-date", "event-end-date"].forEach(id => { $(id).required = allDay; $(id).disabled = !allDay; });
         updateOverlap();
     }
-    function openEvent(event = null, key = selected) {
+    function examRecipients() {
+        if (!$("event-exam-fields")) return;
+        const audience = $("event-exam-audience").value;
+        $("event-exam-division-field").hidden = audience !== "division";
+        $("event-exam-student-field").hidden = audience !== "student";
+        const student = $("event-exam-student").value;
+        $("event-exam-student").replaceChildren();
+        (account?.students || []).filter(item => item.batch_id === $("event-exam-class").value).forEach(item => {
+            const option = node("option", "", `${item.full_name || "Student"}${item.roll_number ? ` · ${item.roll_number}` : ""}`);
+            option.value = item.id; $("event-exam-student").append(option);
+        });
+        if ([...$("event-exam-student").options].some(item => item.value === student)) $("event-exam-student").value = student;
+    }
+    function openEvent(event = null, key = selected, assigned = false) {
         if (!ready || loading || saving) return;
+        examMode = assigned || event?.source === "teacher_exam";
+        readOnly = examMode && event?.can_edit !== true && !!event;
+        if (assigned && account?.role !== "teacher") return;
+        eventForm.querySelectorAll("input,select,textarea,button").forEach(input => { input.disabled = false; });
         eventForm.reset(); editing = event;
         $("event-form-error").textContent = "";
-        $("calendar-event-title").textContent = event ? "Edit event" : "New event";
+        $("calendar-event-title").textContent = readOnly ? "Assigned exam" : examMode ? event ? "Edit assigned exam" : "Assign an exam" : event ? "Edit event" : "New event";
         $("event-title").value = event?.title || "";
         $("event-description").value = event?.description || "";
-        $("event-category").value = event?.category || "lecture";
+        $("event-category").value = examMode ? "examination" : event?.category || "lecture";
         $("event-location").value = event?.location || "";
         $("event-reminder").value = event?.reminder_minutes == null ? "" : String(event.reminder_minutes);
         $("event-all-day").checked = event?.all_day || false;
@@ -171,11 +204,30 @@
         $("event-end").value = event && !event.all_day ? dates.localInput(event.ends_at) : `${key}T10:00`;
         $("event-start-date").value = event?.all_day ? event.start_date : key;
         $("event-end-date").value = event?.all_day ? dates.addDays(event.end_date, -1) : key;
-        $("event-delete").hidden = !event;
+        $("event-delete").hidden = !event || readOnly;
+        $("event-save").hidden = readOnly;
+        if ($("event-exam-fields")) {
+            $("event-exam-fields").hidden = !examMode || readOnly;
+            $("event-exam-class").replaceChildren();
+            (account?.batches || []).forEach(batch => {
+                const option = node("option", "", batch.label || batch.id); option.value = batch.id;
+                $("event-exam-class").append(option);
+            });
+            if (event?.batch_id) $("event-exam-class").value = event.batch_id;
+            $("event-exam-audience").value = event?.audience || "class";
+            $("event-exam-division").value = event?.target_division || "A";
+            examRecipients();
+            if (event?.assigned_to) $("event-exam-student").value = event.assigned_to;
+            $("event-exam-note").hidden = !examMode;
+            $("event-exam-note").textContent = readOnly ? `Assigned by your teacher · ${String(event.batch_id || "").toUpperCase()}${event.target_division ? ` · Division ${event.target_division}` : ""}. Your teacher manages this exam.` : "This exam appears in the calendar and dashboard of the approved students you select.";
+        }
         $("event-time-zone-note").textContent = `Enter times in ${timeZone.replaceAll("_", " ")}.${event && event.time_zone !== timeZone ? ` Originally created in ${event.time_zone}.` : ""} Conflict warnings cover this calendar view and the next 30 days.`;
         toggleAllDay();
+        $("event-category").disabled = examMode;
+        if (readOnly) eventForm.querySelectorAll("input,select,textarea").forEach(input => { input.disabled = true; });
+        $("event-save").textContent = examMode ? "Save exam" : "Save event";
         dialog.showModal();
-        $("event-title").focus();
+        if (!readOnly) $("event-title").focus();
     }
     function payload() {
         const allDay = $("event-all-day").checked;
@@ -200,6 +252,13 @@
             }
             if (new Date(data.ends_at) <= new Date(data.starts_at)) throw new Error("The end time must be after the start time.");
         }
+        if (examMode) {
+            const audience = $("event-exam-audience").value;
+            data.audience = audience; data.batch_id = $("event-exam-class").value;
+            data.target_division = audience === "division" ? $("event-exam-division").value : null;
+            data.assigned_to = audience === "student" ? $("event-exam-student").value : null;
+            if (!data.batch_id || audience === "student" && !data.assigned_to) throw new Error("Choose an approved class or student for this exam.");
+        }
         return data;
     }
     function updateOverlap() {
@@ -216,23 +275,25 @@
         eventForm.querySelectorAll("button").forEach(button => { button.disabled = busy; });
         $("calendar-delete-confirm").disabled = busy;
         eventForm.setAttribute("aria-busy", String(busy));
-        $("event-save").textContent = busy ? "Saving…" : "Save event";
+        $("event-save").textContent = busy ? "Saving…" : examMode ? "Save exam" : "Save event";
     }
     eventForm.addEventListener("submit", async event => {
         event.preventDefault();
-        if (saving) return;
+        if (saving || readOnly) return;
         $("event-form-error").textContent = "";
         let data;
         try { data = payload(); } catch (error) { $("event-form-error").textContent = error.message; return; }
         mutationBusy(true);
         const current = generation;
         try {
-            const saved = editing ? await service.update(editing.id, data) : await service.create(data);
+            const saved = examMode ? editing ? await service.updateExam(editing.id, data) : await service.createExam(data)
+                : editing ? await service.update(editing.id, data) : await service.create(data);
             if (current !== generation) return;
             if (!saved?.id) throw new Error("The server did not confirm your event. Refresh to check it.");
             dialog.close();
             selected = saved.all_day ? saved.start_date : dates.dateKey(new Date(saved.starts_at));
             if (typeof showToast === "function") showToast("Event saved.");
+            document.dispatchEvent(new CustomEvent("mannsathi:calendar-changed"));
             await load();
         } catch (error) {
             if (current !== generation) return;
@@ -245,14 +306,15 @@
         $("calendar-delete-dialog").showModal();
     });
     $("calendar-delete-confirm").addEventListener("click", async () => {
-        if (saving || !editing) return;
+        if (saving || !editing || readOnly) return;
         mutationBusy(true);
         const current = generation;
         try {
-            await service.remove(editing.id);
+            await (examMode ? service.removeExam(editing.id) : service.remove(editing.id));
             if (current !== generation) return;
             $("calendar-delete-dialog").close(); dialog.close();
             if (typeof showToast === "function") showToast("Event deleted.");
+            document.dispatchEvent(new CustomEvent("mannsathi:calendar-changed"));
             await load();
         } catch (error) {
             if (current !== generation) return;
@@ -281,9 +343,22 @@
     });
     $("open-calendar").addEventListener("click", showCalendar);
     $("open-chat").addEventListener("click", showChat);
-    ["new-chat", "space-home", "chat-history"].forEach(id => $(id).addEventListener("click", () => { if (typeof canNavigate !== "function" || canNavigate()) showChat(); }));
+    ["new-chat", "chat-history"].forEach(id => $(id).addEventListener("click", () => { if (typeof canNavigate !== "function" || canNavigate()) showChat(); }));
     document.addEventListener("keydown", event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" && !document.querySelector("dialog[open]")) showChat(); });
     $("calendar-create").addEventListener("click", () => openEvent());
+    $("calendar-assign-exam")?.addEventListener("click", () => openEvent(null, selected, true));
+    $("event-exam-audience")?.addEventListener("change", examRecipients);
+    $("event-exam-class")?.addEventListener("change", examRecipients);
+    window.MannSathiCalendar = Object.freeze({
+        show: showCalendar,
+        assignExam: async () => { await showCalendar(); if (ready && account?.role === "teacher") openEvent(null, selected, true); },
+        openAssignedExam: async event => {
+            selected = event.all_day ? event.start_date : dates.dateKey(new Date(event.starts_at));
+            await showCalendar();
+            const loaded = events.find(item => item.id === event.id);
+            if (loaded) openEvent(loaded);
+        }
+    });
     ["calendar-refresh", "calendar-retry"].forEach(id => $(id).addEventListener("click", load));
     $("calendar-today").addEventListener("click", () => { selected = dates.dateKey(); load(); });
     [["calendar-prev", -1], ["calendar-next", 1]].forEach(([id, count]) => $(id).addEventListener("click", () => {

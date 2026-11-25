@@ -2,8 +2,12 @@
 import json
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlsplit
+from urllib.error import HTTPError, URLError
+from urllib.request import Request
 
+from api.shared import supabase
 from api.shared.supabase import ApiError, authenticate
+from api.shared.exams_validation import exam_payload
 from api.shared.validation import date_range, event_payload, identifier
 
 SELECT = ("id,user_id,title,description,category,location,all_day,starts_at,ends_at,"
@@ -42,6 +46,81 @@ def body_json(request):
         raise ApiError(400, "Send a valid JSON calendar event.") from None
 
 
+def exam_rpc(user, name, payload):
+    request = Request(user.url + "/rest/v1/rpc/mannsathi_exam_" + name,
+                      data=json.dumps(payload, allow_nan=False).encode("utf-8"),
+                      headers={"apikey": user.key, "Authorization": "Bearer " + user.token,
+                               "Content-Type": "application/json", "Accept": "application/json"}, method="POST")
+    try:
+        with supabase.urlopen(request, timeout=12) as response:
+            raw = response.read(8_000_001)
+            if len(raw) > 8_000_000:
+                raise ApiError(502, "Exam response is too large. Choose a shorter date range.")
+            return json.loads(raw)
+    except HTTPError as exc:
+        try:
+            detail = json.loads(exc.read(65536))
+            code = detail.get("code") if isinstance(detail, dict) else None
+        except (ValueError, OSError):
+            code = None
+        if code == "PT404":
+            raise ApiError(404, "This exam is unavailable or cannot be changed by your account.") from None
+        if code == "PT403":
+            raise ApiError(403, "Only an approved teacher for this class can assign exams.") from None
+        if code == "PT422":
+            raise ApiError(400, "No approved students match this exam's recipients. Review enrollments in Notifications.") from None
+        if code in {"PT400", "23514", "22007", "22P02"}:
+            raise ApiError(400, "Check the exam dates, fields, and recipients.") from None
+        if exc.code == 401 or code == "PT401":
+            raise ApiError(401, "Please sign in again to use your calendar.") from None
+        if exc.code == 403:
+            raise ApiError(403, "Exam access was denied. Check your account permissions.") from None
+        if exc.code in {400, 404} or code in {"PGRST202", "42P01", "42883"}:
+            raise ApiError(503, "Assigned exam storage is unavailable. Apply the teacher exams migration.") from None
+        raise ApiError(502, "Could not save or load assigned exams. Please retry.") from None
+    except (URLError, TimeoutError, OSError, ValueError, UnicodeError):
+        raise ApiError(502, "Could not reach assigned exams. Please retry.") from None
+
+
+def dispatch_exams(request, method, user, query):
+    allowed = {"action", "start", "end", "time_zone"} if method == "GET" else {"action", "id"} if method in {"PATCH", "DELETE"} else {"action"}
+    if set(query) - allowed:
+        raise ApiError(400, "Unsupported exam query parameter.")
+    if method == "GET":
+        date_range(query)
+        rows = []
+        for offset in range(0, 10001, 500):
+            page = exam_rpc(user, "list", {"p_start": query["start"], "p_end": query["end"],
+                        "p_time_zone": query["time_zone"], "p_offset": offset, "p_limit": 500})
+            if not isinstance(page, list) or any(not isinstance(row, dict) for row in page):
+                raise ApiError(502, "Assigned exams could not be loaded. Please retry.")
+            rows.extend(page)
+            if len(rows) > 10000:
+                raise ApiError(400, "Too many exams in this date range. Choose a shorter range.")
+            if len(page) < 500:
+                send_json(request, 200, {"events": rows})
+                return
+        raise ApiError(400, "Too many exams in this date range. Choose a shorter range.")
+    payload = {"p_data": exam_payload(body_json(request))} if method != "DELETE" else {}
+    if method != "POST":
+        payload["p_id"] = identifier(query.get("id"))
+    result = exam_rpc(user, {"POST": "create", "PATCH": "edit", "DELETE": "delete"}[method], payload)
+    if method == "DELETE":
+        if not isinstance(result, dict) or result.get("deleted") is not True:
+            raise ApiError(502, "Exam deletion could not be confirmed. Refresh before retrying.")
+        send_json(request, 200, result)
+        return
+    if not isinstance(result, dict) or result.get("user_id") != user.user_id or result.get("can_edit") is not True:
+        raise ApiError(502, "The exam save could not be confirmed. Refresh before retrying.")
+    try:
+        saved_id = identifier(result.get("id"))
+    except ApiError:
+        raise ApiError(502, "The exam save could not be confirmed. Refresh before retrying.") from None
+    if method == "PATCH" and saved_id != payload["p_id"]:
+        raise ApiError(502, "The exam save could not be confirmed. Refresh before retrying.")
+    send_json(request, 201 if method == "POST" else 200, {"event": result})
+
+
 def dispatch(request, method):
     try:
         if method not in {"GET", "POST", "PATCH", "DELETE"}:
@@ -51,6 +130,9 @@ def dispatch(request, method):
         if any(len(values) != 1 for values in raw_query.values()):
             raise ApiError(400, "Send each calendar query parameter once.")
         query = {key: value[0] for key, value in raw_query.items()}
+        if query.get("action") == "exams":
+            dispatch_exams(request, method, user, query)
+            return
         allowed = {"start", "end", "time_zone"} if method == "GET" else {"id"} if method in {"PATCH", "DELETE"} else set()
         if set(query) - allowed:
             raise ApiError(400, "Unsupported calendar query parameter.")

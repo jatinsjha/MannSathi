@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">A happy little frog in a peach jumper</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#f0f5df"/><stop offset="1" stop-color="#dbe6bf"/></linearGradient><linearGradient id="skin" x2="0" y2="1"><stop stop-color="#abd299"/><stop offset="1" stop-color="#7fb583"/></linearGradient></defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/><circle cx="30" cy="77" r="4" fill="#fff" opacity=".6"/><path d="m166 45 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff" opacity=".8"/>
+  <ellipse cx="100" cy="199" rx="66" ry="47" fill="#dba68d"/>
+  <path d="M100 64c37 0 65 26 65 56 0 32-26 51-65 51s-65-19-65-51c0-30 28-56 65-56Z" fill="url(#skin)" stroke="#62916a" stroke-width="3"/>
+  <circle cx="68" cy="75" r="27" fill="url(#skin)" stroke="#62916a" stroke-width="3"/><circle cx="132" cy="75" r="27" fill="url(#skin)" stroke="#62916a" stroke-width="3"/>
+  <circle cx="68" cy="76" r="16" fill="#fff8e9"/><circle cx="132" cy="76" r="16" fill="#fff8e9"/><ellipse cx="69" cy="78" rx="7" ry="10" fill="#394c3b"/><ellipse cx="131" cy="78" rx="7" ry="10" fill="#394c3b"/><circle cx="71" cy="75" r="2.5" fill="#fff"/><circle cx="133" cy="75" r="2.5" fill="#fff"/>
+  <ellipse cx="100" cy="140" rx="40" ry="21" fill="#c1dda9" opacity=".65"/>
+  <ellipse cx="56" cy="116" rx="13" ry="7" fill="#dfad9e" opacity=".8"/><ellipse cx="144" cy="116" rx="13" ry="7" fill="#dfad9e" opacity=".8"/>
+  <path d="M65 128q35 35 70 0" fill="none" stroke="#4d7d55" stroke-width="4" stroke-linecap="round"/><path d="m61 126 7 3m64 0 7-3" stroke="#4d7d55" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="89" cy="108" r="2" fill="#6d9b6d"/><circle cx="111" cy="108" r="2" fill="#6d9b6d"/>
+  <path d="M62 162q38 17 76 0l-4 18q-34 15-68 0Z" fill="#ebc1a6"/><path d="m95 187 5 3 5-3 2 5-7 5-7-5Z" fill="#fff0d5"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">A bright little fox with a teal scarf</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#fff1df"/><stop offset="1" stop-color="#f2d5b4"/></linearGradient><linearGradient id="fur" x2="0" y2="1"><stop stop-color="#f0ac71"/><stop offset="1" stop-color="#d7834d"/></linearGradient></defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/><circle cx="30" cy="77" r="4" fill="#fff" opacity=".6"/><path d="m164 45 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff" opacity=".8"/>
+  <ellipse cx="100" cy="199" rx="63" ry="50" fill="#df8e59"/>
+  <path d="M45 92 41 34q0-8 8-4l43 36m63 26 4-58q0-8-8-4l-43 36" fill="url(#fur)" stroke="#a96544" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m50 43 4 40 24-18m72-22-4 40-24-18" fill="#6d5150"/><path d="m55 52 3 24 14-12m73-12-3 24-14-12" fill="#e4ab9e"/>
+  <path d="M100 52c30 0 49 20 56 46l9 22-17 7q-14 40-48 40t-48-40l-17-7 9-22c7-26 26-46 56-46Z" fill="url(#fur)" stroke="#a96544" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M44 105q41 0 56 33 15-33 56-33l6 15-17 7q-12 35-45 38-33-3-45-38l-17-7Z" fill="#fff1de"/>
+  <path d="M67 102q6-7 13 0m40 0q6-7 13 0" fill="none" stroke="#503b35" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="64" cy="123" rx="11" ry="6" fill="#e99393" opacity=".6"/><ellipse cx="136" cy="123" rx="11" ry="6" fill="#e99393" opacity=".6"/>
+  <path d="M92 134q8-4 16 0l-8 8Z" fill="#66473c"/><path d="M100 142v4m0 0q-7 7-13 1m13-1q7 7 13 1" fill="none" stroke="#8b6350" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M61 158q39 18 78 0l-2 18q-37 15-74 0Z" fill="#5fa6a3"/><path d="m73 172 15 4-9 24H62Z" fill="#81bab6"/>
+</svg>

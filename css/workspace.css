@@ -62,6 +62,8 @@
 .space-nav-link:hover { background: var(--surface-hover); color: var(--ink); }
 .sidebar-user-row { display: flex; align-items: center; gap: 10px; padding: 18px 8px 10px; margin-top: 14px; border-top: 1px solid var(--line); }
 .sidebar-user-avatar { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border: 1px solid var(--line-strong); border-radius: 50%; background: linear-gradient(145deg, #655072, #2c354b); color: #f5ebff; font-size: 14px; }
+.avatar-art { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.sidebar-user-avatar, .message.user .msg-avatar { overflow: hidden; }
 .sidebar-user-info { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
 .sidebar-user-info > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .sidebar-user-info > span:last-child { color: var(--muted); font-size: 10px; }
@@ -231,7 +233,7 @@
   .app-card { display: block; height: 100vh; height: 100dvh; padding: 0; border: 0; border-radius: 0; }
   .main-panel { height: 100vh; height: 100dvh; border: 0; border-radius: 0; }
   .sidebar { position: fixed; inset: 0 auto 0 0; width: min(290px,85vw); z-index: 30; padding: 25px 18px 20px; background: var(--panel); transform: translateX(-100%); visibility: hidden; transition: transform .25s, visibility .25s; box-shadow: var(--shadow); }
-  .sidebar.open { transform: translateX(0); visibility: visible; }
+  .sidebar.open { transform: translateX(0); visibility: visible; transition: transform .25s, visibility 0s; }
   .sidebar-close { display: grid; width: 29px; height: 29px; border: 0; }
   .sidebar-close .icon { width: 17px; height: 17px; }
   .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 25; background: #06091299; opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s; }
@@ -275,3 +277,29 @@
   .breathing-dialog .dialog-top h2 { font-size: 19px; }
   .cosmic-dialog { padding: 22px; }
 }
+
+/* Keep the familiar workspace while allowing an icon-only navigation rail. */
+.desktop-sidebar-toggle { width: 32px; height: 32px; border: 0; border-radius: 8px; }
+.desktop-sidebar-toggle .icon { width: 19px; height: 19px; }
+@media (min-width: 761px) {
+  .app-card { transition: grid-template-columns .2s ease; }
+  .app-card.sidebar-collapsed { grid-template-columns: 76px minmax(0,1fr); }
+  .sidebar-collapsed .sidebar { padding-left: 10px; padding-right: 10px; }
+  .sidebar-collapsed .sidebar-header { justify-content: center; margin-left: 0; margin-right: 0; }
+  .sidebar-collapsed .sidebar-brand { gap: 0; }
+  .sidebar-collapsed .sidebar-brand img { width: 34px; height: 34px; }
+  .sidebar-collapsed .sidebar-brand > span,
+  .sidebar-collapsed .btn-new-chat > span,
+  .sidebar-collapsed .btn-new-chat > kbd,
+  .sidebar-collapsed .space-nav-link > span,
+  .sidebar-collapsed .sidebar-conversations,
+  .sidebar-collapsed .sidebar-user-info { display: none; }
+  .sidebar-collapsed .btn-new-chat,
+  .sidebar-collapsed .space-nav-link { justify-content: center; gap: 0; padding-left: 0; padding-right: 0; min-height: 44px; }
+  .sidebar-collapsed .workspace-module-nav { margin-top: 15px; }
+  .sidebar-collapsed .sidebar-footer { margin-top: auto; }
+  .sidebar-collapsed .sidebar-user-row { flex-direction: column; padding-left: 0; padding-right: 0; gap: 10px; }
+  .sidebar-collapsed .desktop-sidebar-toggle .icon { transform: rotate(180deg); }
+}
+@media (max-width: 760px) { .desktop-sidebar-toggle { display: none; } }
+@media (prefers-reduced-motion: reduce) { .app-card { transition: none; } }

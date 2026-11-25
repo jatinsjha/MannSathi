@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">A friendly puppy in a mint bandana</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#e5f6ee"/><stop offset="1" stop-color="#bfe4d6"/></linearGradient><linearGradient id="fur" x2="0" y2="1"><stop stop-color="#fff0d5"/><stop offset="1" stop-color="#eed4ac"/></linearGradient></defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+  <path d="m34 49 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff" opacity=".8"/><circle cx="169" cy="84" r="5" fill="#fff" opacity=".5"/>
+  <ellipse cx="100" cy="192" rx="64" ry="45" fill="#f4dcb6"/>
+  <path d="M57 59C24 46 21 91 28 128q5 19 23 6l19-31m73-44c33-13 36 32 29 69q-5 19-23 6l-19-31" fill="#b88665" stroke="#855e49" stroke-width="3"/>
+  <path d="M45 97c0-32 19-53 55-53s55 21 55 53v27c0 27-24 45-55 45s-55-18-55-45Z" fill="url(#fur)" stroke="#b7916d" stroke-width="3"/>
+  <path d="M111 47c27 3 42 22 42 49q-25 9-36-8Z" fill="#c9966f"/>
+  <ellipse cx="75" cy="107" rx="6" ry="8" fill="#403431"/><ellipse cx="125" cy="107" rx="6" ry="8" fill="#403431"/>
+  <circle cx="76" cy="104" r="2" fill="#fff"/><circle cx="126" cy="104" r="2" fill="#fff"/>
+  <ellipse cx="64" cy="124" rx="10" ry="6" fill="#e4a18c" opacity=".6"/><ellipse cx="137" cy="124" rx="10" ry="6" fill="#e4a18c" opacity=".6"/>
+  <ellipse cx="100" cy="135" rx="29" ry="23" fill="#fff7e8"/>
+  <path d="M88 121q12-6 24 0-1 11-12 12-11-1-12-12Z" fill="#5d4942"/><path d="M95 123q4-2 8-1" stroke="#9b857c" stroke-width="3" stroke-linecap="round"/>
+  <path d="M90 139q10 10 20 0v9q-10 17-20 0Z" fill="#d98c95"/><path d="M82 135q8 11 18 3 10 8 18-3" fill="none" stroke="#785b4d" stroke-width="3" stroke-linecap="round"/>
+  <path d="m59 158 41 35 41-35q-41 18-82 0Z" fill="#71b5a1"/><path d="m90 172 10 9 10-9" fill="none" stroke="#b4e4d5" stroke-width="3" stroke-linecap="round"/>
+</svg>

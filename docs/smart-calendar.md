@@ -101,3 +101,7 @@ The supplied live schema has been reviewed. Live CRUD, persistence across authen
 | `tests/calendar-browser.cjs` | UI interactions, test-server persistence, responsive checks |
 | `docs/smart-calendar.md`, `docs/database-review.md`, `README.md` | Architecture, reviewed schema, security, SQL and deployment instructions |
 
+## Teacher-scheduled exams
+
+Teachers can assign an exam to their class, one approved division or one student through Calendar's **Assign exam** button. Assigned exams appear on students' calendars and the homepage dashboard; students can view their details while the creating teacher manages edits and deletion. Apply migration 005 once after 001/002/003. See [teacher-exams.md](teacher-exams.md) for setup, permissions and verification.
+

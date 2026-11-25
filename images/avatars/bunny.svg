@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">A sweet bunny with a lavender bow</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#edf0ff"/><stop offset="1" stop-color="#cdd6f5"/></linearGradient><linearGradient id="fur" x2="0" y2="1"><stop stop-color="#fffdf7"/><stop offset="1" stop-color="#eae5e4"/></linearGradient></defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/><circle cx="30" cy="107" r="4" fill="#fff" opacity=".7"/><path d="m166 57 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff" opacity=".7"/>
+  <ellipse cx="100" cy="200" rx="61" ry="48" fill="#f0ece8"/>
+  <ellipse cx="70" cy="57" rx="17" ry="46" transform="rotate(-10 70 57)" fill="url(#fur)" stroke="#b5aeb9" stroke-width="3"/><ellipse cx="130" cy="57" rx="17" ry="46" transform="rotate(10 130 57)" fill="url(#fur)" stroke="#b5aeb9" stroke-width="3"/>
+  <ellipse cx="70" cy="53" rx="8" ry="30" transform="rotate(-10 70 53)" fill="#e8bbc9"/><ellipse cx="130" cy="53" rx="8" ry="30" transform="rotate(10 130 53)" fill="#e8bbc9"/>
+  <path d="M43 116c0-29 23-48 57-48s57 19 57 48v13c0 28-24 46-57 46s-57-18-57-46Z" fill="url(#fur)" stroke="#b5aeb9" stroke-width="3"/>
+  <ellipse cx="75" cy="119" rx="6" ry="8" fill="#514353"/><ellipse cx="125" cy="119" rx="6" ry="8" fill="#514353"/><circle cx="76" cy="116" r="2" fill="#fff"/><circle cx="126" cy="116" r="2" fill="#fff"/>
+  <ellipse cx="64" cy="137" rx="12" ry="7" fill="#e8a9bd" opacity=".7"/><ellipse cx="136" cy="137" rx="12" ry="7" fill="#e8a9bd" opacity=".7"/>
+  <path d="M94 133q6-4 12 0l-6 7Z" fill="#c18d9d"/><path d="M100 140v5m0 0q-6 7-12 1m12-1q6 7 12 1" fill="none" stroke="#968094" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="m90 149 10 3 10-3v9q-10 4-20 0Z" fill="#fff" stroke="#d6cbd0" stroke-width="1.5"/><path d="M100 153v7" stroke="#d6cbd0" stroke-width="1.5"/>
+  <path d="M98 178q-23-18-25-3l1 20q12 6 24-9m4-8q23-18 25-3l-1 20q-12 6-24-9" fill="#9b8bc6"/><circle cx="100" cy="182" r="7" fill="#b7a8dc"/>
+</svg>

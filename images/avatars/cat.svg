@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title">
+  <title id="title">A cheerful ginger cat in a lilac scarf</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#efe6ff"/><stop offset="1" stop-color="#d8c9f1"/></linearGradient><linearGradient id="fur" x2="0" y2="1"><stop stop-color="#f8c489"/><stop offset="1" stop-color="#e9a66b"/></linearGradient></defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+  <circle cx="31" cy="68" r="5" fill="#fff" opacity=".6"/><path d="m163 43 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff" opacity=".7"/>
+  <ellipse cx="100" cy="196" rx="65" ry="48" fill="#f1b67c"/>
+  <path d="M50 91 42 37q-1-8 8-5l39 30m62 29 7-54q1-8-8-5l-39 30" fill="url(#fur)" stroke="#a86846" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m50 45 6 35 25-17m69-18-6 35-25-17" fill="#e79298"/>
+  <path d="M42 100c0-34 22-53 58-53s58 19 58 53v17c0 31-26 52-58 52s-58-21-58-52Z" fill="url(#fur)" stroke="#a86846" stroke-width="3"/>
+  <path d="m83 50 6 18m11-20v21m17-19-6 18" stroke="#c18451" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="72" cy="108" rx="6" ry="8" fill="#403233"/><ellipse cx="128" cy="108" rx="6" ry="8" fill="#403233"/>
+  <circle cx="73" cy="105" r="2" fill="#fff"/><circle cx="129" cy="105" r="2" fill="#fff"/>
+  <ellipse cx="62" cy="124" rx="11" ry="6" fill="#ef9598" opacity=".65"/><ellipse cx="138" cy="124" rx="11" ry="6" fill="#ef9598" opacity=".65"/>
+  <path d="M76 132q24-29 48 0 0 21-24 21t-24-21Z" fill="#fff0da"/>
+  <path d="M94 124q6-4 12 0l-6 6Z" fill="#986257"/><path d="M100 130v6m0 0q-6 8-13 1m13-1q6 8 13 1" fill="none" stroke="#765046" stroke-width="3" stroke-linecap="round"/>
+  <path d="m52 127-18-3m19 12-18 3m113-12 18-3m-19 12 18 3" stroke="#a86846" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M60 158q40 17 80 0l-2 18q-38 16-76 0Z" fill="#957bbd"/><path d="m115 172 15-3 7 28-18 3Z" fill="#ac93cd"/>
+</svg>

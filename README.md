@@ -4,9 +4,11 @@ MannSathi is an AI-powered student well-being companion designed to help student
 
 Built with a simple web interface and the Google Gemini API, MannSathi encourages students to express what is on their mind and offers concise, practical suggestions to help them take the next step.
 
-The full-screen student workspace includes Smart Calendar, Task Manager and Focus Room, independently of Gemini. Students can create subjects, run configurable Pomodoros and view private study graphs, weekly goals and session history. Task Manager supports personal tasks and teacher assignments with private completion tracking and persistent notifications. Students and teachers have separate sign-in pages with backend role verification. See the [Focus setup guide](docs/focus-room.md), [Task Manager guide](docs/task-manager.md) and [Calendar guide](docs/smart-calendar.md). The broader Student Progress dashboard remains a future module.
+The full-screen workspace opens on a progress dashboard with pastel subject cards, saved study time, task progress, weekly goals and upcoming exams. Students can create subjects, run configurable Pomodoros and view private study graphs and session history. Teachers can assign tasks and calendar exams to a class, division or student. Students and teachers have separate sign-in pages with backend role verification. The sidebar collapses to an icon rail, and accounts receive one of seven local cartoon animal avatars. See the [Dashboard guide](docs/dashboard.md), [Focus setup guide](docs/focus-room.md), [Task Manager guide](docs/task-manager.md) and [Calendar guide](docs/smart-calendar.md).
 
 Students can save name, roll number, 25CS class and division A/B/C in Settings. Teachers review enrollment requests in **Notifications** and assign work to all 25CS, one division or one student. Student details/divisions require migration 003; Focus Room adds migration 004 after that. See the [student/division guide](docs/student-divisions.md) and [Focus setup](docs/focus-room.md). Do not rerun migrations that are already installed.
+
+Teacher-scheduled calendar exams require [migration 005](database/migrations/005_teacher_exams.sql) once after 001/002/003. See the [exam setup guide](docs/teacher-exams.md). The new migration has been tested locally and has not been applied to the live database.
 
 **Live Demo:** https://mannsathi.vercel.app
 
