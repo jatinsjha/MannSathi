@@ -4,9 +4,9 @@ MannSathi is an AI-powered student well-being companion designed to help student
 
 Built with a simple web interface and the Google Gemini API, MannSathi encourages students to express what is on their mind and offers concise, practical suggestions to help them take the next step.
 
-The full-screen student workspace includes Smart Calendar and Task Manager, independently of Gemini. Task Manager supports personal tasks, teacher assignments to a class or individual student, private completion tracking and persistent assignment notifications. Students and teachers have separate sign-in pages with backend role verification. See [the Task Manager deployment and onboarding guide](docs/task-manager.md) and [the Calendar guide](docs/smart-calendar.md). Focus Room and Student Progress remain future modules.
+The full-screen student workspace includes Smart Calendar, Task Manager and Focus Room, independently of Gemini. Students can create subjects, run configurable Pomodoros and view private study graphs, weekly goals and session history. Task Manager supports personal tasks and teacher assignments with private completion tracking and persistent notifications. Students and teachers have separate sign-in pages with backend role verification. See the [Focus setup guide](docs/focus-room.md), [Task Manager guide](docs/task-manager.md) and [Calendar guide](docs/smart-calendar.md). The broader Student Progress dashboard remains a future module.
 
-Students can now save name, roll number, 25CS class and division A/B/C in Settings. Teachers review enrollment requests and assign work to all 25CS, one division or one student. The empty-roster error is explained and prevented. Existing installations need only migration 003 for this update; see [the student/division upgrade guide](docs/student-divisions.md).
+Students can save name, roll number, 25CS class and division A/B/C in Settings. Teachers review enrollment requests in **Notifications** and assign work to all 25CS, one division or one student. Student details/divisions require migration 003; Focus Room adds migration 004 after that. See the [student/division guide](docs/student-divisions.md) and [Focus setup](docs/focus-room.md). Do not rerun migrations that are already installed.
 
 **Live Demo:** https://mannsathi.vercel.app
 
@@ -97,7 +97,7 @@ Replace the placeholder with your own API key.
 
 Use only a Supabase publishable or legacy anon key as `SUPABASE_KEY`; `/api/config` rejects secret/service-role keys. Review the read-only schema findings and approve the proposed `database/migrations/000_profile_privileges.sql` (profile grants) and `database/migrations/001_smart_calendar.sql` (calendar) before applying them in that order. Rerun `database/inspect_calendar_schema.sql` if your schema has changed. See the calendar guide for constraints, policies, and two-account verification.
 
-For this workspace the user confirmed 000/001 are already applied; do not rerun them. Task Manager needs the new `database/migrations/002_tasks_and_teachers.sql`, followed by administrator provisioning of the intended teachers and approved students. Public signup cannot grant teacher access. Add `/teacher-login.html` to Supabase Auth's allowed password-reset redirects. Migration 002 has been tested in a local ephemeral PostgreSQL engine and has not been applied to live Supabase by the agent.
+For this workspace the user confirmed 000/001 are already applied, and the supplied diagnostic confirmed migration 002. Check whether 003 is installed before adding Focus migration 004. Run the read-only `database/inspect_focus_schema.sql`, review `database/migrations/004_focus_subjects.sql`, then apply it once as described in the Focus guide. Live migration 004 has not been applied by the agent. Teachers require administrator provisioning; public signup cannot grant teacher access. Add `/teacher-login.html` to Supabase Auth's allowed password-reset redirects.
 
 **Never commit `.env`, `.env.local`, or API keys to GitHub.**
 

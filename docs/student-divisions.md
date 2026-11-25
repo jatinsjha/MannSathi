@@ -35,7 +35,7 @@ Roll numbers support letters, digits, spaces, slash, underscore and hyphen, up t
 
 ## How teachers approve and assign
 
-1. Sign in with an approved teacher account and open **Tasks → Class roster**.
+1. Sign in with an approved teacher account and open **Notifications** using the bell. Pending enrollment requests appear here and contribute to the badge.
 2. Click **Refresh roster** after students submit their details.
 3. Review the requested name, roll, division and account email, then approve or reject each request. Email is shown only to authorized teachers reviewing requests for their own class.
 4. Approved students and A/B/C counts update. Open **New task** and choose:

@@ -32,6 +32,12 @@ function view(task, user) {
 }
 const stubSdk = `(() => {
   const users = ${JSON.stringify(users)}, callbacks = [];
+  const scheduleInterval = window.setInterval.bind(window);
+  window.__testNotificationPoll = null;
+  window.setInterval = (callback, milliseconds, ...args) => {
+    if(milliseconds === 30000 && String(callback).includes('refreshNotifications')) window.__testNotificationPoll = () => callback(...args);
+    return scheduleInterval(callback, milliseconds, ...args);
+  };
   const label = () => { const value=localStorage.getItem('tasks-test-user'); return value==='none' ? null : value || 'A'; };
   const current = () => label() ? {access_token:'test-'+label(),user:{id:users[label()],email:label().toLowerCase()+'@example.test',user_metadata:{full_name:(label()==='T'?'Teacher ':'Student ')+label()}}} : null;
   window.__testSetUser = value => {localStorage.setItem('tasks-test-user',value||'none');callbacks.forEach(callback=>callback(value?'SIGNED_IN':'SIGNED_OUT',current()));};
@@ -152,6 +158,7 @@ async function fill(values) {
 async function taskReady() {await waitFor('document.getElementById("tasks-panel").getAttribute("aria-busy") === "false" && !document.getElementById("tasks-create").disabled');}
 async function openTasks() {await click('#open-tasks');await taskReady();}
 async function switchUser(label) {
+  if(await evaluate('document.getElementById("notifications-dialog").open')) await click('#notifications-dialog [data-task-close]');
   await evaluate(`window.__testSetUser(${JSON.stringify(label)})`);await delay(150);await openTasks();
   assert.equal(await evaluate('document.getElementById("account-type").textContent'),label==='T'?'Teacher account':'Student account');
 }
@@ -217,10 +224,15 @@ async function rosterReady(user, division) {
   if(user) await waitFor(`(()=>{const row=document.querySelector('[data-enrollment-user="${user}"]');const button=document.querySelector('[data-enrollment-approve="${user}"]');return row?.dataset.enrollmentDivision === ${JSON.stringify(division)} && !!button && !button.disabled;})()`);
 }
 async function refreshRoster(user, division) {
+  if(!await evaluate('document.getElementById("notifications-dialog").open')) await click('#notifications-button');
+  await waitFor('document.getElementById("notifications-dialog").open');
   await click('#roster-refresh');await rosterReady(user, division);
 }
 async function enrollmentChecks() {
   await switchUser('T'); await waitFor('!document.getElementById("teacher-roster-section").hidden');
+  assert.equal(await evaluate('document.getElementById("teacher-roster-section").closest("dialog")?.id'),'notifications-dialog','Enrollment review belongs in Notifications');
+  assert.equal(await evaluate('document.getElementById("tasks-panel").contains(document.getElementById("teacher-roster-section"))'),false,'Tasks must not contain enrollment review');
+  await waitFor('document.getElementById("notifications-count").hidden');
   assert.equal(classRows().length,0); await click('#tasks-create'); await fill({'task-title':'Empty class work','task-audience':'class','task-batch':'25cs'});
   const count=requests.filter(request=>request.action==='create').length;
   assert.equal(await evaluate('document.getElementById("task-save").disabled'),true,'Empty class must disable assignment');
@@ -228,9 +240,16 @@ async function enrollmentChecks() {
   await details('A','Alice Student','01','A'); await details('B','Bob Student','02','B'); await details('C','Carol Student','03','C');
   assert.equal(classRows().length,0,'Settings must not approve their own enrollment');
   await switchUser('T'); await refreshRoster(); await waitFor('document.querySelectorAll("[data-enrollment-user]").length === 3');
-  for(const label of ['A','B','C']) {await rosterReady(users[label],label);await click(`[data-enrollment-approve="${users[label]}"]`);await waitFor(`!document.querySelector('[data-enrollment-user="${users[label]}"]')`);await rosterReady();}
+  await waitFor('!document.getElementById("notifications-count").hidden && document.getElementById("notifications-count").textContent === "3"');
+  assert.equal(await evaluate('document.getElementById("notifications-title").textContent'),'Notifications & approvals');
+  assert.equal(await evaluate('document.getElementById("notifications-mark-all").hidden'),true,'Enrollment requests cannot be marked as read');
+  for(const [index,label] of ['A','B','C'].entries()) {
+    await rosterReady(users[label],label);await click(`[data-enrollment-approve="${users[label]}"]`);await waitFor(`!document.querySelector('[data-enrollment-user="${users[label]}"]')`);await rosterReady();
+    await waitFor(index<2 ? `document.getElementById('notifications-count').textContent === '${2-index}'` : 'document.getElementById("notifications-count").hidden');
+  }
   await waitFor('document.querySelectorAll("[data-roster-user]").length === 3');
   assert.equal(classRows().length,3); assert(classRows().every(student=>student.roll_number&&student.division));
+  await click('#notifications-dialog [data-task-close]');
   await click('#tasks-create'); await fill({'task-title':'All 25CS work','task-audience':'class','task-batch':'25cs'}); await saveTask();
   const all=[...tasks.values()].find(task=>task.title==='All 25CS work');
   for(const label of ['A','B','C'])assert(recipients.has(all.id+':'+users[label]));
@@ -260,14 +279,19 @@ async function enrollmentChecks() {
   await refreshRoster(users.A,'A');
   await click(`[data-enrollment-approve="${users.A}"]`);await waitFor(`!document.querySelector('[data-enrollment-user="${users.A}"]')`);await rosterReady();
   assert.equal(memberships.get(users.A).status,'approved');assert.equal(memberships.get(users.A).division,'A');
-  console.log('PASS self-service profile requests, teacher enrollment review, approved roster counts, class/division/individual targeting and private progress');
+  console.log('PASS self-service profile requests, teacher approval inbox/badges, approved roster counts, class/division/individual targeting and private progress');
 }
 async function settingsAndLayout() {
   await details('C','<img src=x onerror="window.__profileXss=true">','03','C','approved');
   await switchUser('T');await refreshRoster();await waitFor('document.querySelectorAll("[data-roster-user]").length === 3');
   assert.equal(await evaluate('window.__profileXss'),undefined);assert.equal(await evaluate('document.querySelectorAll("#approved-roster-list img").length'),0);
   for(const [width,height] of [[1440,900],[390,844],[320,740]]) {
-    await viewport(width,height);await screenshot('teacher-roster-'+width);
+    await viewport(width,height);
+    if(!await evaluate('document.getElementById("notifications-dialog").open')) await click('#notifications-button');
+    await rosterReady();
+    const inboxBounds=await evaluate('(()=>{const d=document.getElementById("notifications-dialog"),r=d.getBoundingClientRect();return {left:r.left,right:r.right,width:innerWidth,scroll:d.scrollWidth,client:d.clientWidth};})()');
+    assert(inboxBounds.left>=0&&inboxBounds.right<=inboxBounds.width+1&&inboxBounds.scroll<=inboxBounds.client+1,'Teacher inbox overflows: '+JSON.stringify(inboxBounds));
+    await screenshot('teacher-roster-'+width);await click('#notifications-dialog [data-task-close]');
     await click('#tasks-create');await fill({'task-audience':'division','task-batch':'25cs','task-division':'B'});
     const bounds=await evaluate('(()=>{const d=document.getElementById("task-dialog"),r=d.getBoundingClientRect();return {left:r.left,right:r.right,width:innerWidth,scroll:d.scrollWidth,client:d.clientWidth};})()');
     assert(bounds.left>=0&&bounds.right<=bounds.width+1&&bounds.scroll<=bounds.client+1);await screenshot('division-editor-'+width);await click('#task-dialog [data-task-close]');
@@ -290,8 +314,22 @@ async function settingsAndLayout() {
   await click('#settings-dialog [data-close-dialog]');
   console.log('PASS persisted profile names, safe roster text, own-account reset, settings sections and responsive settings/division dialogs');
 }
+async function inboxPollingChecks() {
+  await switchUser('T');await waitFor('document.getElementById("notifications-count").hidden');
+  await click('#open-chat');assert.equal(await evaluate('document.getElementById("tasks-panel").hidden'),true);
+  memberships.set(users.C,{...memberships.get(users.C),division:'B',status:'pending'});profiles.set(users.C,{...profiles.get(users.C),division:'B'});
+  await evaluate('window.__testNotificationPoll()');
+  await waitFor('!document.getElementById("notifications-count").hidden && document.getElementById("notifications-count").textContent === "1"');
+  assert.equal(await evaluate('document.getElementById("tasks-panel").hidden'),true,'Polling must update the bell with Tasks hidden');
+  await refreshRoster(users.C,'B');await click(`[data-enrollment-reject="${users.C}"]`);
+  await waitFor('document.getElementById("notifications-count").hidden');assert.equal(memberships.get(users.C).status,'rejected');
+  await details('C','Carol Student','03','C');await switchUser('T');await refreshRoster(users.C,'C');
+  await click(`[data-enrollment-approve="${users.C}"]`);await waitFor('document.getElementById("notifications-count").hidden');await rosterReady();
+  await click('#notifications-dialog [data-task-close]');
+  console.log('PASS teacher inbox polling while Tasks hidden, rejection, fresh requests and badge clearing');
+}
 (async()=>{
-  await initializeBrowser();await enrollmentChecks();await settingsAndLayout();
+  await initializeBrowser();await enrollmentChecks();await inboxPollingChecks();await settingsAndLayout();
   assert.equal(pageErrors.length,0,'Unhandled JavaScript exceptions: '+JSON.stringify(pageErrors));
   console.log('Division/settings browser checks passed. Screenshots: '+output);
 })().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{

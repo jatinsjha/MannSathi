@@ -9,8 +9,8 @@ from api.shared import supabase
 from api.shared.supabase import ApiError, authenticate
 from api.shared.tasks_validation import create_payload, enrollment_payload, fields, identifier, settings_payload, status_payload
 
-EMPTY_CLASS = "No approved students are enrolled in this class. Ask students to save their class and division in Settings, then approve their enrollment requests."
-EMPTY_DIVISION = "No approved students are enrolled in this division. Check the division roster and approve its pending enrollment requests."
+EMPTY_CLASS = "No approved students are enrolled in this class. Ask students to save their class and division in Settings, then approve their enrollment requests in Notifications."
+EMPTY_DIVISION = "No approved students are enrolled in this division. Open Notifications to review and approve its pending enrollment requests."
 SAFE_VALIDATION_MESSAGES = {
     "This class has no approved students to assign": EMPTY_CLASS,
     "No approved students are enrolled in this class.": EMPTY_CLASS,

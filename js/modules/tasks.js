@@ -8,7 +8,7 @@
     const statuses = { pending: "Pending", in_progress: "In progress", completed: "Completed" };
     const priorities = { low: "Low", medium: "Medium", high: "High", urgent: "Urgent" }, rank = { low: 0, medium: 1, high: 2, urgent: 3 };
     let context = null, tasks = [], notifications = [], editing = null, requestId = null, enrollments = [];
-    let epoch = 0, loadId = 0, loading = false, saving = false, notificationBusy = false, seen = null, notificationLoading = false;
+    let epoch = 0, loadId = 0, rosterLoadId = 0, loading = false, saving = false, notificationBusy = false, seen = null, enrollmentSeen = null, unreadCount = 0, notificationLoading = false;
     const dialog = $("task-dialog"), form = $("task-form"), notificationDialog = $("notifications-dialog");
     const isTeacher = () => context?.role === "teacher";
     const labelDate = value => new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -23,7 +23,7 @@
     function complete(task) { return isTeacher() && task.audience !== "personal" ? task.recipient_count > 0 && task.completed_count === task.recipient_count : task.status === "completed"; }
     function overdue(task) { return !complete(task) && task.due_at && new Date(task.due_at).getTime() < Date.now(); }
     function resetPrivate() {
-        epoch++; loadId++; context = null; tasks = []; notifications = []; seen = null;
+        epoch++; loadId++; rosterLoadId++; context = null; tasks = []; notifications = []; seen = null; enrollmentSeen = null; unreadCount = 0;
         loading = false; notificationLoading = false;
         $("tasks-list").replaceChildren(); $("notifications-list").replaceChildren();
         $("tasks-summary").textContent = ""; $("tasks-create").disabled = true; $("notifications-button").disabled = true;
@@ -40,10 +40,6 @@
     }
     async function initialize() {
         const current = epoch;
-        if (isTeacher()) {
-            $("roster-status").textContent = "Refreshing class roster…";
-            $("enrollment-list").querySelectorAll("button").forEach(button => { button.disabled = true; });
-        }
         try {
             const result = await service.context();
             if (current !== epoch) return;
@@ -55,8 +51,6 @@
             $("tasks-create").disabled = false; $("notifications-button").disabled = false;
             $("account-type").textContent = isTeacher() ? "Teacher account" : "Student account";
             $("tasks-role-note").textContent = isTeacher() ? "Assign work to your classes or an individual student." : "Your personal tasks and work assigned by your teachers.";
-            if (isTeacher()) await refreshRoster();
-            if (current !== epoch) return;
             await refreshNotifications();
             if (current !== epoch) return;
             if (!panel.hidden) await load();
@@ -163,7 +157,7 @@
         const audience = $("task-audience").value, students = studentsInClass();
         const targets = audience === "division" ? students.filter(student => student.division === $("task-division").value) : audience === "student" ? students.filter(student => !$("task-roster-division").value || student.division === $("task-roster-division").value) : students;
         $("task-roster-note").hidden = audience === "personal" || targets.length > 0;
-        $("task-roster-note").textContent = "No approved students in this selection. Students must save their class and division in Settings, then you can approve their requests in Class roster.";
+        $("task-roster-note").textContent = "No approved students in this selection. Ask students to save their class and division in Settings. You can then approve their enrollment requests in Notifications.";
         if (!saving) $("task-save").disabled = !editing && audience !== "personal" && targets.length === 0;
         for (const option of $("task-division").options) option.textContent = `${option.value} (${students.filter(student => student.division === option.value).length} students)`;
     }
@@ -211,7 +205,7 @@
             if (audience !== "personal" && !$("task-batch").value) throw new Error("Choose one of your approved classes.");
             if (audience === "student" && !$("task-student").value) throw new Error("Select the student who should receive this task.");
             const targets = audience === "division" ? studentsInClass().filter(student => student.division === $("task-division").value) : studentsInClass();
-            if (audience !== "personal" && !targets.length) throw new Error("There are no approved students in this selection. Review class enrollment requests first.");
+            if (audience !== "personal" && !targets.length) throw new Error("There are no approved students in this selection. Open Notifications to review enrollment requests first.");
             Object.assign(data, { request_id: requestId, audience, batch_id: audience === "personal" ? null : $("task-batch").value, assigned_to: audience === "student" ? $("task-student").value : null, target_division: audience === "division" ? $("task-division").value : null, status: audience === "personal" ? $("task-status").value : "pending" });
         }
         return data;
@@ -219,24 +213,29 @@
     async function refreshRoster() {
         $("teacher-roster-section").hidden = !isTeacher();
         if (!isTeacher()) return;
-        const current = epoch, previous = $("roster-class").value;
+        const current = epoch, request = ++rosterLoadId, previous = $("roster-class").value;
         $("roster-class").replaceChildren();
         for (const batch of context.batches) { const option = element("option", "", batch.label); option.value = batch.id; $("roster-class").append(option); }
         if (context.batches.some(batch => batch.id === previous)) $("roster-class").value = previous;
         $("roster-status").textContent = "Loading enrollment requests…";
+        $("enrollment-list").querySelectorAll("button").forEach(button => { button.disabled = true; });
         try {
             const result = await service.enrollments();
-            if (current !== epoch) return;
+            if (current !== epoch || request !== rosterLoadId || !isTeacher()) return;
             if (!Array.isArray(result.enrollments)) throw new Error("Could not load class enrollment requests.");
-            enrollments = result.enrollments;
+            enrollments = result.enrollments.filter(row => context.batches.some(batch => batch.id === row.batch_id));
+            const keys = new Set(enrollments.map(row => `${row.user_id}:${row.batch_id}:${row.division || ""}`));
+            const newRequest = enrollmentSeen && [...keys].some(key => !enrollmentSeen.has(key));
+            enrollmentSeen = keys;
             $("roster-status").textContent = "Class roster is up to date.";
+            if (newRequest) showToast("A student requested class enrollment. Open Notifications to review it.");
         } catch (error) {
-            if (current !== epoch) return;
+            if (current !== epoch || request !== rosterLoadId) return;
             enrollments = [];
             $("roster-status").textContent = error.message;
             if (sessionFailure(error)) return;
         }
-        if (current === epoch) renderRoster();
+        if (current === epoch && request === rosterLoadId) { renderRoster(); updateNotificationBadge(); }
     }
     function renderRoster() {
         if (!isTeacher()) return;
@@ -306,12 +305,18 @@
     $("task-roster-division").addEventListener("change", fillStudents);
     $("roster-class").addEventListener("change", renderRoster);
     $("roster-refresh").addEventListener("click", initialize);
+    function updateNotificationBadge() {
+        const pending = isTeacher() ? enrollments.length : 0, total = unreadCount + pending;
+        const badge = $("notifications-count"); badge.hidden = total === 0; badge.textContent = total > 99 ? "99+" : String(total);
+        $("notifications-button").setAttribute("aria-label", total ? `Notifications, ${unreadCount} unread${isTeacher() ? `, ${pending} enrollment requests` : ""}` : "Notifications");
+    }
     function renderNotifications(unread) {
-        const badge = $("notifications-count"); badge.hidden = unread === 0; badge.textContent = unread > 99 ? "99+" : String(unread);
-        $("notifications-button").setAttribute("aria-label", unread ? `Notifications, ${unread} unread` : "Notifications");
+        unreadCount = unread; updateNotificationBadge();
+        $("notifications-title").textContent = isTeacher() ? "Notifications & approvals" : "Notifications";
         $("notifications-list").replaceChildren();
-        $("notifications-status").textContent = notifications.length ? `${unread} unread · Showing the latest ${notifications.length}` : "No assignment notifications yet.";
+        $("notifications-status").textContent = notifications.length ? `${unread} unread · Showing the latest ${notifications.length}` : isTeacher() ? "Enrollment requests appear above. Assignment notifications will appear here." : "No assignment notifications yet.";
         $("notifications-mark-all").textContent = "Mark shown as read";
+        $("notifications-mark-all").hidden = isTeacher() && notifications.length === 0;
         $("notifications-mark-all").disabled = !notifications.some(note => !note.read_at);
         for (const note of notifications) {
             const item = element("li", "notification-item" + (!note.read_at ? " is-unread" : "")); item.dataset.notificationId = note.id;
@@ -343,6 +348,8 @@
         if (!context || notificationLoading) return;
         const current = epoch; notificationLoading = true;
         try {
+            if (isTeacher()) await refreshRoster();
+            if (current !== epoch || !context) return;
             const result = await service.notifications();
             if (current !== epoch) return;
             if (!Array.isArray(result.notifications) || !Number.isInteger(result.unread_count)) throw new Error("Could not load your notifications.");

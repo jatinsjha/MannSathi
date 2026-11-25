@@ -1,0 +1,15 @@
+const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
+const context = { window: {}, Date, performance: { now: () => 0 } }; vm.createContext(context);
+vm.runInContext(fs.readFileSync('js/utils/focus-clock.js', 'utf8'), context);
+let monotonic = 10; const clock = context.window.MannSathiFocusClock.create(() => monotonic);
+clock.sync('2026-11-25T09:00:00Z');
+const session = { status: 'running', deadline_at: '2026-11-25T09:25:00Z', planned_seconds: 1500, remaining_seconds: 1500 };
+assert.equal(clock.remaining(session), 1500);
+monotonic += 400000; assert.equal(clock.remaining(session), 1100, 'A throttled redraw skips real elapsed time');
+session.status = 'paused'; session.remaining_seconds = 1100; monotonic += 3600000; assert.equal(clock.remaining(session), 1100, 'Paused time never counts');
+clock.sync('2026-11-25T10:10:00Z'); session.status = 'running'; session.deadline_at = '2026-11-25T10:28:20Z';
+assert.equal(clock.remaining(session), 1100, 'A resumed server deadline survives refresh');
+monotonic += 4000000; assert.equal(clock.remaining(session), 0, 'An offline session is capped at its deadline');
+assert.equal(context.window.MannSathiFocusClock.format(61.1), '01:02');
+assert.throws(() => clock.sync('invalid'), /Invalid server time/);
+console.log('PASS timestamp clock, throttling, paused time, resume, deadline cap and formatting');

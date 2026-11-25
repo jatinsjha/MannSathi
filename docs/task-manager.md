@@ -2,7 +2,7 @@
 
 Student details, teacher enrollment review and A/B/C division targeting are now implemented in migration 003. See [student-divisions.md](student-divisions.md) for the confirmed empty-roster diagnosis and upgrade workflow. The original module/migration 002 remains the baseline; do not rerun it for this upgrade.
 
-The workspace now fills the window edge to edge, with the existing sidebar, chat, Calendar, themes and mobile drawer. Task Manager supports personal task CRUD, descriptions, subjects, task types, deadlines, estimates, priorities, completion/reopening, search, status/priority/source filters, overdue/today/upcoming lists and deadline sorting. These features use real Supabase data and do not call Gemini. Focus Room and Progress remain future modules.
+The workspace fills the window edge to edge, with the existing sidebar, chat, Calendar, themes and mobile drawer. Task Manager supports personal task CRUD, descriptions, subjects, task types, deadlines, estimates, priorities, completion/reopening, search, status/priority/source filters, overdue/today/upcoming lists and deadline sorting. These features use real Supabase data and do not call Gemini. Teacher enrollment approval now lives in Notifications. [Focus Room](focus-room.md) adds private study tracking; the broader Progress dashboard remains a future module.
 
 ## Separate student and teacher access
 

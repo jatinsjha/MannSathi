@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/modules/calendar.css">
   <link rel="stylesheet" href="css/modules/tasks.css">
   <link rel="stylesheet" href="css/modules/settings.css">
+  <link rel="stylesheet" href="css/modules/focus.css">
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
@@ -25,6 +26,7 @@
       <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 20 11Z"/><path d="M8 10h8m-8 4h5"/></symbol>
       <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h3m4 0h3"/></symbol>
       <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></symbol>
+      <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="14" r="8"/><path d="M9 2h6m-3 0v4m6 1 2-2M12 10v5l3 2"/></symbol>
       <symbol id="i-breathe" viewBox="0 0 24 24"><path d="M3 8h12a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/></symbol>
       <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></symbol>
       <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6m-6 4h6m-6 4h3"/></symbol>
@@ -53,6 +55,7 @@
           <button class="space-nav-link" id="open-chat" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span>Chat</span></button>
           <button class="space-nav-link" id="open-calendar" type="button"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Calendar</span></button>
           <button class="space-nav-link" id="open-tasks" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>Tasks</span></button>
+          <button class="space-nav-link" id="open-focus" type="button"><svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg><span>Focus Room</span></button>
         </nav>
         <div class="sidebar-conversations">
           <div class="conv-section-header">
@@ -161,20 +164,31 @@
           <p id="tasks-summary" class="tasks-summary"></p>
           <div class="tasks-status-row"><p id="tasks-status" role="status" aria-live="polite"></p><button class="task-button" id="tasks-retry" type="button" hidden>Try again</button></div>
           <div class="tasks-auth" id="tasks-auth" hidden><h2>Sign in to use your tasks</h2><p>Your personal tasks and teacher assignments are saved to your account.</p><a class="primary-button" href="index.html">Student sign in</a></div>
-          <section class="teacher-roster-section" id="teacher-roster-section" aria-labelledby="teacher-roster-heading" hidden>
-            <div class="roster-header">
-              <div><h2 id="teacher-roster-heading">Class roster</h2><p id="roster-help">Students appear here after saving their class and division in Settings. Review their enrollment requests before assigning class work.</p></div>
-              <div class="roster-controls"><label class="sr-only" for="roster-class">Class roster</label><select id="roster-class"></select><button class="task-button" id="roster-refresh" type="button">Refresh roster</button></div>
-            </div>
-            <p class="roster-counts" id="roster-counts"></p>
-            <p class="roster-status" id="roster-status" role="status" aria-live="polite"></p>
-            <div class="roster-columns">
-              <section aria-labelledby="enrollment-heading"><h3 id="enrollment-heading">Pending enrollment requests</h3><ul class="enrollment-list" id="enrollment-list" aria-label="Pending enrollment requests"></ul></section>
-              <section aria-labelledby="approved-roster-heading"><h3 id="approved-roster-heading">Approved students</h3><ul class="approved-roster-list" id="approved-roster-list" aria-label="Approved class roster"></ul></section>
-            </div>
-          </section>
           <ul class="tasks-list" id="tasks-list" aria-label="Your tasks"></ul>
           <p class="task-empty" id="tasks-empty" hidden>No tasks match these filters.</p>
+        </section>
+        <section class="focus-panel" id="focus-panel" aria-labelledby="focus-heading" hidden>
+          <header class="focus-header"><div><h1 id="focus-heading">Focus Room</h1><p>Choose one subject. Study with intention, then make room for a break.</p></div></header>
+          <div class="focus-status-row"><p id="focus-status" role="status" aria-live="polite"></p><button class="focus-button" id="focus-retry" type="button" hidden>Try again</button></div>
+          <div class="focus-auth" id="focus-auth" hidden><h2>Your personal study space</h2><p>Sign in with a student account to save subjects, focus sessions and study statistics.</p><a class="primary-button" href="index.html">Student sign in</a></div>
+          <div class="focus-layout">
+            <section class="focus-timer-card" aria-labelledby="focus-timer-title">
+              <h2 id="focus-timer-title" class="sr-only">Pomodoro timer</h2>
+              <div class="focus-mode-controls" role="group" aria-label="Session type"><button class="focus-button" type="button" data-focus-mode="focus" aria-pressed="true">Focus</button><button class="focus-button" type="button" data-focus-mode="short_break" aria-pressed="false">Short break</button><button class="focus-button" type="button" data-focus-mode="long_break" aria-pressed="false">Long break</button></div>
+              <p class="focus-timer-type" id="focus-timer-type">Focus</p>
+              <div class="focus-timer-display" id="focus-timer-display" aria-live="off">25:00</div>
+              <label class="sr-only" for="focus-timer-progress">Session progress</label><progress id="focus-timer-progress" max="1" value="0"></progress>
+              <p class="focus-session-status" id="focus-session-status" role="status" aria-live="polite">Ready when you are.</p>
+              <div class="focus-field-row"><div class="focus-field"><label for="focus-subject">Subject</label><select id="focus-subject"><option value="">Choose a subject</option></select></div><div class="focus-field"><label for="focus-task">Related task <span>(optional)</span></label><select id="focus-task"><option value="">No task selected</option></select></div></div>
+              <div class="focus-timer-actions"><button class="primary-button" id="focus-start" type="button">Start focus</button><button class="focus-button" id="focus-pause" type="button" hidden>Pause</button><button class="focus-button" id="focus-resume" type="button" hidden>Resume</button><button class="focus-button" id="focus-stop" type="button" hidden>Finish early</button><button class="focus-button" id="focus-reset" type="button">Reset</button></div>
+              <p class="focus-note">Focus sessions count time for the selected subject. Break time is kept separate.</p>
+            </section>
+            <aside class="focus-sidebar">
+              <section class="focus-settings-card" aria-labelledby="focus-preferences-title"><h2 id="focus-preferences-title">Your study rhythm</h2><form id="focus-preferences-form"><div class="focus-field-row"><div class="focus-field"><label for="focus-duration">Focus minutes</label><input id="focus-duration" name="focus_minutes" type="number" value="25" min="1" max="180" step="1" required></div><div class="focus-field"><label for="focus-short-duration">Short break minutes</label><input id="focus-short-duration" name="short_break_minutes" type="number" value="5" min="1" max="60" step="1" required></div></div><div class="focus-field-row"><div class="focus-field"><label for="focus-long-duration">Long break minutes</label><input id="focus-long-duration" name="long_break_minutes" type="number" value="15" min="1" max="120" step="1" required></div><div class="focus-field"><label for="focus-cycle-count">Sessions before long break</label><input id="focus-cycle-count" name="sessions_before_long" type="number" value="4" min="1" max="12" step="1" required></div></div><label class="focus-checkbox"><input id="focus-auto-start" name="auto_start" type="checkbox">Automatically start the next session</label><label class="focus-checkbox"><input id="focus-sound" name="sound" type="checkbox">Play a sound when a session ends</label><button class="focus-button" id="focus-preferences-save" type="submit">Save preferences</button><p class="focus-form-status" id="focus-preferences-status" role="status" aria-live="polite"></p></form></section>
+              <section class="focus-subject-card" aria-labelledby="focus-subjects-title"><div class="focus-section-heading"><h2 id="focus-subjects-title">Your subjects</h2><button class="focus-button" id="focus-subject-create" type="button">Add subject</button></div><ul class="focus-subject-list" id="focus-subject-list" aria-label="Study subjects"></ul><p class="focus-note">An optional weekly goal helps you compare time with your own plan.</p></section>
+            </aside>
+          </div>
+          <section class="focus-statistics" id="focus-statistics" aria-labelledby="focus-statistics-title"><div class="focus-section-heading"><div><h2 id="focus-statistics-title">Your study patterns</h2><p>A guide to your study habits, based on time you record.</p></div></div><div class="focus-metrics"><div class="focus-metric"><span>Total focus hours</span><strong id="focus-total-hours">—</strong></div><div class="focus-metric"><span>Focus minutes today</span><strong id="focus-today-minutes">—</strong></div><div class="focus-metric"><span>Focus minutes this week</span><strong id="focus-week-minutes">—</strong></div><div class="focus-metric"><span>Completed sessions</span><strong id="focus-completed-count">—</strong></div></div><div class="focus-chart-grid"><figure class="focus-chart-card"><figcaption>Daily focus time</figcaption><div class="focus-chart" id="focus-daily-chart" aria-label="Daily focus time chart"></div><details class="focus-data-details"><summary>View daily data</summary><table class="focus-data-table" id="focus-daily-table" aria-label="Daily focus time data"></table></details></figure><figure class="focus-chart-card"><figcaption>Time by subject</figcaption><div class="focus-chart" id="focus-subject-chart" aria-label="Subject focus time chart"></div><details class="focus-data-details"><summary>View subject data</summary><table class="focus-data-table" id="focus-subject-table" aria-label="Focus time by subject"></table></details></figure></div><section class="focus-insights-card" aria-labelledby="focus-insights-title"><h3 id="focus-insights-title">Plan your next study session</h3><ul id="focus-insights" class="focus-insights"></ul></section><section class="focus-history-card" aria-labelledby="focus-history-title"><h3 id="focus-history-title">Recent sessions</h3><ul id="focus-history-list" class="focus-history-list" aria-label="Recorded focus sessions"></ul></section></section>
         </section>
         <div class="composer-wrap">
           <form class="composer" id="chat-form">
@@ -318,9 +332,40 @@
   </dialog>
   <dialog class="cosmic-dialog notifications-dialog" id="notifications-dialog" aria-labelledby="notifications-title">
     <div class="dialog-top"><h2 id="notifications-title">Notifications</h2><button class="icon-button" type="button" data-task-close aria-label="Close notifications"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <section class="teacher-roster-section" id="teacher-roster-section" aria-labelledby="teacher-roster-heading" hidden>
+      <div class="roster-header">
+        <div><h2 id="teacher-roster-heading">Student enrollment requests</h2><p id="roster-help">Review enrollment requests for your class, then approve students who belong to it.</p></div>
+        <div class="roster-controls"><label class="sr-only" for="roster-class">Class roster</label><select id="roster-class"></select><button class="task-button" id="roster-refresh" type="button">Refresh roster</button></div>
+      </div>
+      <p class="roster-counts" id="roster-counts"></p>
+      <p class="roster-status" id="roster-status" role="status" aria-live="polite"></p>
+      <div class="roster-columns">
+        <section aria-labelledby="enrollment-heading"><h3 id="enrollment-heading">Pending enrollment requests</h3><ul class="enrollment-list" id="enrollment-list" aria-label="Pending enrollment requests"></ul></section>
+        <section aria-labelledby="approved-roster-heading"><h3 id="approved-roster-heading">Approved students</h3><ul class="approved-roster-list" id="approved-roster-list" aria-label="Approved class roster"></ul></section>
+      </div>
+    </section>
     <button class="task-button" id="notifications-mark-all" type="button">Mark all as read</button>
     <p id="notifications-status" class="notifications-status" role="status" aria-live="polite"></p>
     <ul id="notifications-list" class="notifications-list" aria-label="Assignment notifications"></ul>
+  </dialog>
+  <dialog class="cosmic-dialog focus-dialog" id="focus-subject-dialog" aria-labelledby="focus-subject-dialog-title">
+    <div class="dialog-top"><h2 id="focus-subject-dialog-title">Add subject</h2><button class="icon-button" type="button" data-focus-close aria-label="Close subject"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <form id="focus-subject-form">
+      <div class="focus-field"><label for="focus-subject-name">Subject name</label><input id="focus-subject-name" name="name" type="text" maxlength="100" autocomplete="off" required></div>
+      <div class="focus-field-row">
+        <div class="focus-field"><label for="focus-subject-color">Color</label><select id="focus-subject-color" name="color"><option value="#bda0ed">Purple</option><option value="#84b8e6">Blue</option><option value="#9dc5a9">Green</option><option value="#d4b28c">Gold</option><option value="#e4a2b3">Rose</option></select></div>
+        <div class="focus-field"><label for="focus-subject-goal">Weekly goal <span>(minutes, optional)</span></label><input id="focus-subject-goal" name="weekly_goal_minutes" type="number" min="0" max="10080" step="1" inputmode="numeric" placeholder="e.g. 120"></div>
+      </div>
+      <label class="focus-checkbox"><input id="focus-subject-archived" name="archived" type="checkbox">Archive this subject</label>
+      <p class="focus-note">Archived subjects keep their study history and are removed from the timer's subject choices.</p>
+      <p class="focus-form-error" id="focus-subject-error" role="alert"></p>
+      <div class="focus-form-actions"><button class="focus-button" type="button" data-focus-close>Cancel</button><button class="primary-button" id="focus-subject-save" type="submit">Save subject</button></div>
+    </form>
+  </dialog>
+  <dialog class="cosmic-dialog focus-dialog" id="focus-discard-dialog" aria-labelledby="focus-discard-title">
+    <div class="dialog-top"><h2 id="focus-discard-title">Discard this session?</h2><button class="icon-button" type="button" data-focus-close aria-label="Keep session"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <p>This session's time will not be added to your study statistics. Choose Finish early on the timer to save the time you studied.</p>
+    <div class="focus-form-actions"><button class="focus-button" type="button" data-focus-close>Keep studying</button><button class="primary-button" id="focus-discard-confirm" type="button">Discard session</button></div>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -329,10 +374,13 @@
   <script src="js/services/authenticated-api.js"></script>
   <script src="js/services/calendar-service.js"></script>
   <script src="js/services/task-service.js"></script>
+  <script src="js/services/focus-service.js"></script>
   <script src="js/app.js"></script>
   <script src="js/workspace.js"></script>
   <script src="js/modules/calendar.js"></script>
   <script src="js/modules/tasks.js"></script>
   <script src="js/modules/settings.js"></script>
+  <script src="js/utils/focus-clock.js"></script>
+  <script src="js/modules/focus.js"></script>
 </body>
 </html>
