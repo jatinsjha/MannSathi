@@ -9,7 +9,10 @@ const sidebar = document.getElementById("sidebar");
 const backdrop = document.getElementById("sidebar-backdrop");
 const chatHistoryEl = document.getElementById("chat-history");
 const sidebarUsername = document.getElementById("sidebar-username");
-const userAvatarEl = document.getElementById("user-avatar");
+const accountTrigger = document.getElementById("user-profile-card");
+const accountMenu = document.getElementById("account-menu");
+const accountControl = accountTrigger.parentElement;
+const mobileMenuButton = document.getElementById("mobile-menu");
 const searchInput = document.getElementById("conversation-search");
 const historySearch = document.getElementById("history-search");
 const titleEl = document.getElementById("conversation-title");
@@ -21,8 +24,7 @@ let avatarUserId = "guest";
 let isBusy = false;
 let toastTimer;
 let breathingTimer;
-let sidebarReturnFocus;
-let savedProfileName = null, savedProfileRole = null;
+let accountName = null, accountRole = null;
 
 function loadChats() {
     try {
@@ -141,44 +143,40 @@ function renderHistory() {
 function setUser(name, guest = false, userId = avatarUserId) {
     userInitial = name.charAt(0).toUpperCase();
     sidebarUsername.textContent = name;
-    userAvatarEl.textContent = userInitial;
+    document.getElementById("account-menu-name").textContent = name;
+    accountTrigger.setAttribute("aria-label", "Account menu for " + name);
     avatarUserId = guest ? "guest" : userId;
-    window.MannSathiAvatars?.paint(userAvatarEl, avatarUserId);
+    for (const id of ["user-avatar", "account-menu-avatar"]) {
+        const avatar = document.getElementById(id);
+        avatar.textContent = userInitial;
+        window.MannSathiAvatars?.paint(avatar, avatarUserId, { alt: "" });
+    }
     document.querySelectorAll(".message.user .msg-avatar").forEach(element => window.MannSathiAvatars?.paint(element, avatarUserId));
-    document.getElementById("account-type").textContent = guest ? "Guest mode" : "Personal account";
-    const signout = document.getElementById("sidebar-signout");
-    signout.setAttribute("aria-label", guest ? "Back to sign in" : "Sign out");
-    signout.title = guest ? "Back to sign in" : "Sign out";
+    const roleLabels = { student: "Student account", teacher: "Teacher account" };
+    const accountType = guest ? "Guest mode" : roleLabels[accountRole] || "Personal account";
+    document.getElementById("account-type").textContent = accountType;
+    document.getElementById("account-menu-type").textContent = accountType;
+    accountMenu.querySelector('[data-open-settings="profile"]').hidden = guest || accountRole !== "student";
+    document.getElementById("signout-label").textContent = guest ? "Back to sign in" : "Sign out";
 }
-(async function initUser() {
-    const guest = new URLSearchParams(location.search).get("guest") === "true";
-    if (guest) { setUser("Guest", true); return; }
-    try {
-        if (!window.supabaseReady) { setUser("Guest", true); return; }
-        const { data: { user } } = await (await window.supabaseReady).auth.getUser();
-        if (user) {
-            setUser(savedProfileName || user.user_metadata?.full_name || user.email?.split("@")[0] || "Student", false, user.id);
-            if (savedProfileRole) document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
-        }
-        else setUser("Guest", true);
-    } catch { setUser("Guest", true); }
-})();
 window.addEventListener("mannsathi:profile", event => {
     if (new URLSearchParams(location.search).get("guest") === "true") return;
     if (typeof event.detail?.full_name !== "string" || !["student", "teacher"].includes(event.detail?.role)) return;
-    savedProfileName = event.detail.full_name; savedProfileRole = event.detail.role;
-    setUser(savedProfileName);
-    document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
+    accountName = event.detail.full_name; accountRole = event.detail.role;
+    setUser(accountName);
 });
-window.addEventListener("mannsathi:session-reset", () => {
-    savedProfileName = null; savedProfileRole = null;
-    setUser("Guest", true);
+window.addEventListener("mannsathi:session-reset", event => {
+    closeAccountMenu(accountMenu.contains(document.activeElement));
+    const identity = new URLSearchParams(location.search).get("guest") === "true" ? null : event.detail;
+    accountName = identity?.full_name || null;
+    accountRole = null;
+    if (identity?.user_id) setUser(accountName || "Member", false, identity.user_id);
+    else setUser("Guest", true);
 });
 window.addEventListener("mannsathi:context", event => {
     if (!event.detail?.user_id) return;
-    savedProfileRole = event.detail.role;
-    setUser(sidebarUsername.textContent === "Guest" ? savedProfileRole === "teacher" ? "Teacher" : "Student" : sidebarUsername.textContent, false, event.detail.user_id);
-    document.getElementById("account-type").textContent = savedProfileRole === "teacher" ? "Teacher account" : "Student account";
+    accountRole = event.detail.role;
+    setUser(accountName || (accountRole === "teacher" ? "Teacher" : "Student"), false, event.detail.user_id);
 });
 function showToast(text) {
     toast.textContent = text;
@@ -315,7 +313,7 @@ async function requestReply() {
         sendButton.disabled = false;
         sendButton.classList.remove("loading");
         form.removeAttribute("aria-busy");
-        if (!document.querySelector("dialog[open]") && window.innerWidth > 760) input.focus({ preventScroll: true });
+        if (accountMenu.hidden && !document.querySelector("dialog[open]") && window.innerWidth > 760) input.focus({ preventScroll: true });
     }
 }
 function send(rawText) {
@@ -347,11 +345,60 @@ function clearConversation(save = true) {
     document.getElementById("chat-area").scrollTop = 0;
     if (window.innerWidth > 760) input.focus({ preventScroll: true });
 }
+function accountMenuItems() {
+    return [...accountMenu.querySelectorAll('[role="menuitem"]:not([hidden])')];
+}
+function openAccountMenu(last = false) {
+    accountMenu.hidden = false;
+    accountTrigger.setAttribute("aria-expanded", "true");
+    const items = accountMenuItems();
+    (last ? items.at(-1) : items[0]).focus();
+}
+function closeAccountMenu(restoreFocus = false) {
+    if (accountMenu.hidden) return;
+    accountTrigger.setAttribute("aria-expanded", "false");
+    accountMenu.hidden = true;
+    if (restoreFocus) accountTrigger.focus({ preventScroll: true });
+}
+accountTrigger.addEventListener("click", () => {
+    if (accountMenu.hidden) openAccountMenu();
+    else closeAccountMenu(true);
+});
+accountTrigger.addEventListener("keydown", event => {
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault();
+        openAccountMenu(event.key === "ArrowUp");
+    }
+});
+accountMenu.addEventListener("keydown", event => {
+    if (event.key === "Tab") {
+        closeAccountMenu(true);
+        return;
+    }
+    if (event.key === " " && event.target.matches("a")) {
+        event.preventDefault();
+        event.target.click();
+        return;
+    }
+    const items = accountMenuItems(), index = items.indexOf(document.activeElement);
+    const next = {
+        ArrowDown: (index + 1) % items.length, ArrowUp: (index - 1 + items.length) % items.length,
+        Home: 0, End: items.length - 1
+    }[event.key];
+    if (next !== undefined) {
+        event.preventDefault();
+        items[next].focus();
+    }
+});
+function dismissOutsideAccount(event) {
+    if (!accountControl.contains(event.target)) closeAccountMenu();
+}
+document.addEventListener("click", dismissOutsideAccount);
+document.addEventListener("focusin", dismissOutsideAccount);
 function openSidebar() {
-    sidebarReturnFocus = document.activeElement;
     sidebar.classList.add("open");
     backdrop.classList.add("show");
-    document.getElementById("mobile-menu").setAttribute("aria-expanded", "true");
+    mobileMenuButton.setAttribute("aria-expanded", "true");
     if (window.innerWidth <= 760) document.getElementById("main-panel").inert = true;
     document.getElementById("sidebar-close").focus();
     requestAnimationFrame(() => {
@@ -360,17 +407,18 @@ function openSidebar() {
 }
 function closeSidebar() {
     const wasOpen = sidebar.classList.contains("open");
+    closeAccountMenu(accountMenu.contains(document.activeElement));
     sidebar.classList.remove("open");
     backdrop.classList.remove("show");
     document.getElementById("main-panel").inert = false;
-    document.getElementById("mobile-menu").setAttribute("aria-expanded", "false");
-    if (wasOpen) sidebarReturnFocus?.focus({ preventScroll: true });
+    mobileMenuButton.setAttribute("aria-expanded", "false");
+    if (wasOpen) mobileMenuButton.focus({ preventScroll: true });
 }
 function openDialog(id) {
     closeSidebar();
     document.getElementById(id).showModal();
 }
-document.getElementById("mobile-menu").addEventListener("click", openSidebar);
+mobileMenuButton.addEventListener("click", openSidebar);
 document.getElementById("sidebar-close").addEventListener("click", closeSidebar);
 backdrop.addEventListener("click", closeSidebar);
 document.getElementById("new-chat").addEventListener("click", () => clearConversation());
@@ -382,8 +430,7 @@ document.getElementById("sidebar-search-btn").addEventListener("click", e => {
     else { searchInput.value = ""; renderHistory(); }
 });
 searchInput.addEventListener("input", renderHistory);
-document.getElementById("settings-button").addEventListener("click", () => openDialog("settings-dialog"));
-document.querySelectorAll("[data-open-settings]").forEach(button => button.addEventListener("click", () => openDialog("settings-dialog")));
+document.getElementById("account-help").addEventListener("click", () => openDialog("help-dialog"));
 document.querySelectorAll("[data-open-breathing]").forEach(b => b.addEventListener("click", () => openDialog("breathing-dialog")));
 document.getElementById("clear-chat").addEventListener("click", () => { if (canNavigate()) openDialog("clear-dialog"); });
 document.getElementById("settings-clear-history").addEventListener("click", () => {
@@ -412,6 +459,11 @@ input.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
 });
 document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !accountMenu.hidden) {
+        e.preventDefault();
+        closeAccountMenu(true);
+        return;
+    }
     if (e.key === "Escape") closeSidebar();
     if (sidebar.classList.contains("open") && e.key === "Tab") {
         const focusables = [...sidebar.querySelectorAll('button:not([disabled]), a[href], input')].filter(el => el.getClientRects().length);
@@ -424,7 +476,7 @@ document.addEventListener("keydown", e => {
         clearConversation();
     }
 });
-window.addEventListener("resize", () => { if (window.innerWidth > 760) closeSidebar(); });
+window.matchMedia("(max-width: 760px)").addEventListener("change", () => closeSidebar());
 document.getElementById("sidebar-signout").addEventListener("click", async e => {
     e.preventDefault();
     if (!canNavigate()) return;

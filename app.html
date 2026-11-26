@@ -32,12 +32,15 @@
       <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></symbol>
       <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6m-6 4h6m-6 4h3"/></symbol>
       <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--panel)"/><circle cx="15" cy="17" r="3" fill="var(--panel)"/></symbol>
+      <symbol id="i-profile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M5.5 18a7 7 0 0 1 13 0"/></symbol>
+      <symbol id="i-appearance" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4.2 1.8c-1.2.8-1.7 1.2-1.7 2.7m0 3h.01"/></symbol>
+      <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
       <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-8h8m-4-4 4 4-4 4"/></symbol>
       <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
       <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/></symbol>
       <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16m5-11-3 3 3 3"/></symbol>
       <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
-      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
       <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.8-1L20 12M4 12l2.1 6A7 7 0 0 0 17.9 17"/></symbol>
     </defs>
   </svg>
@@ -46,41 +49,59 @@
   <div class="app-wrapper">
     <div class="app-card">
       <aside class="sidebar" id="sidebar" aria-label="Conversations and account">
-        <div class="sidebar-header">
-          <a href="app.html" class="orbit-brand sidebar-brand" aria-label="MannSathi home">
-            <img src="images/logo.png" alt="" width="40" height="40"><span>MannSathi</span>
-          </a>
-          <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="Close menu"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
-        </div>
-        <button class="btn-new-chat" id="new-chat" type="button" aria-label="New chat" title="New chat">
-          <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>New chat</span><kbd>Ctrl K</kbd>
-        </button>
-        <nav class="workspace-module-nav" aria-label="Workspace">
-          <button class="space-nav-link" id="open-dashboard" type="button" aria-current="page" aria-label="Dashboard" title="Dashboard"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span>Dashboard</span></button>
-          <button class="space-nav-link" id="open-chat" type="button" aria-label="Chat" title="Chat"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span>Chat</span></button>
-          <button class="space-nav-link" id="open-calendar" type="button" aria-label="Calendar" title="Calendar"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Calendar</span></button>
-          <button class="space-nav-link" id="open-tasks" type="button" aria-label="Tasks" title="Tasks"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>Tasks</span></button>
-          <button class="space-nav-link" id="open-focus" type="button" aria-label="Focus Room" title="Focus Room"><svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg><span>Focus Room</span></button>
-        </nav>
-        <div class="sidebar-conversations">
-          <div class="conv-section-header">
-            <span class="recent-label"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>Recent</span>
-            <button class="search-history-button" id="sidebar-search-btn" type="button" aria-label="Search chats" aria-expanded="false" aria-controls="history-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
+        <div class="sidebar-content">
+          <div class="sidebar-header">
+            <a href="app.html" class="orbit-brand sidebar-brand" aria-label="MannSathi home">
+              <img src="images/logo.png" alt="" width="40" height="40"><span>MannSathi</span>
+            </a>
+            <button class="icon-button sidebar-close" id="sidebar-close" type="button" aria-label="Close menu"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
           </div>
-          <div class="history-search" id="history-search" hidden>
-            <label class="sr-only" for="conversation-search">Search chats</label>
-            <input type="search" id="conversation-search" placeholder="Search chats…" autocomplete="off">
+          <button class="btn-new-chat" id="new-chat" type="button" aria-label="New chat" title="New chat">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>New chat</span><kbd>Ctrl K</kbd>
+          </button>
+          <nav class="workspace-module-nav" aria-label="Workspace">
+            <button class="space-nav-link" id="open-dashboard" type="button" aria-current="page" aria-label="Dashboard" title="Dashboard"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span>Dashboard</span></button>
+            <button class="space-nav-link" id="open-chat" type="button" aria-label="Chat" title="Chat"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span>Chat</span></button>
+            <button class="space-nav-link" id="open-calendar" type="button" aria-label="Calendar" title="Calendar"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Calendar</span></button>
+            <button class="space-nav-link" id="open-tasks" type="button" aria-label="Tasks" title="Tasks"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>Tasks</span></button>
+            <button class="space-nav-link" id="open-focus" type="button" aria-label="Focus Room" title="Focus Room"><svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg><span>Focus Room</span></button>
+          </nav>
+          <div class="sidebar-conversations">
+            <div class="conv-section-header">
+              <span class="recent-label"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>Recent</span>
+              <button class="search-history-button" id="sidebar-search-btn" type="button" aria-label="Search chats" aria-expanded="false" aria-controls="history-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
+            </div>
+            <div class="history-search" id="history-search" hidden>
+              <label class="sr-only" for="conversation-search">Search chats</label>
+              <input type="search" id="conversation-search" placeholder="Search chats…" autocomplete="off">
+            </div>
+            <div class="chat-history" id="chat-history" role="list" aria-label="Conversations"></div>
+            <button class="clear-all-btn" id="clear-chat" type="button" hidden>Clear history</button>
           </div>
-          <div class="chat-history" id="chat-history" role="list" aria-label="Conversations"></div>
-          <button class="clear-all-btn" id="clear-chat" type="button" hidden>Clear history</button>
         </div>
         <footer class="sidebar-footer">
           <button class="space-nav-link" data-open-breathing type="button" aria-label="Breathing exercise" title="Breathing exercise"><svg class="icon" aria-hidden="true"><use href="#i-breathe"/></svg><span>Breathing exercise</span></button>
-          <button class="space-nav-link" id="settings-button" type="button" aria-label="Settings" title="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></button>
-          <div class="sidebar-user-row" id="user-profile-card">
-            <div class="sidebar-user-avatar" id="user-avatar">S</div>
-            <div class="sidebar-user-info"><span id="sidebar-username">Student</span><span id="account-type">Personal account</span></div>
-            <a href="index.html" class="signout-icon-btn" id="sidebar-signout" title="Sign out" aria-label="Sign out"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg></a>
+          <div class="sidebar-account">
+            <button class="sidebar-user-row" id="user-profile-card" type="button" aria-label="Account menu" title="Account menu" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
+              <span class="sidebar-user-avatar" id="user-avatar" aria-hidden="true">S</span>
+              <span class="sidebar-user-info"><span id="sidebar-username">Student</span><span id="account-type">Personal account</span></span>
+              <svg class="icon account-chevron" aria-hidden="true"><use href="#i-chevron-up"/></svg>
+            </button>
+            <div class="account-menu" id="account-menu" role="menu" aria-label="Account options" hidden>
+              <div class="account-menu-identity" aria-hidden="true">
+                <span class="sidebar-user-avatar" id="account-menu-avatar">S</span>
+                <span class="sidebar-user-info"><span id="account-menu-name">Student</span><span id="account-menu-type">Personal account</span></span>
+              </div>
+              <div class="account-menu-group" role="group" aria-label="Preferences">
+                <button type="button" role="menuitem" tabindex="-1" data-open-settings="profile" hidden><svg class="icon" aria-hidden="true"><use href="#i-profile"/></svg>Profile</button>
+                <button type="button" role="menuitem" tabindex="-1" data-open-settings="appearance"><svg class="icon" aria-hidden="true"><use href="#i-appearance"/></svg>Appearance</button>
+                <button type="button" role="menuitem" tabindex="-1" id="settings-button" data-open-settings="account"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Settings</button>
+              </div>
+              <div class="account-menu-group" role="group" aria-label="Help and account access">
+                <button type="button" role="menuitem" tabindex="-1" id="account-help"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>Help</button>
+                <a href="index.html" role="menuitem" tabindex="-1" id="sidebar-signout"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg><span id="signout-label">Sign out</span></a>
+              </div>
+            </div>
           </div>
         </footer>
       </aside>
@@ -98,7 +119,6 @@
               <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg>
               <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13A9 9 0 1 1 11 3.2 7 7 0 0 0 20.8 13Z"/></svg>
             </button>
-            <button type="button" class="icon-button more-button" data-open-settings aria-label="Chat settings"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg></button>
           </div>
         </header>
         <section class="dashboard-panel" id="dashboard-panel" aria-labelledby="dashboard-heading">
@@ -277,6 +297,17 @@
       <p class="settings-help">Account access is managed by your college. Changing student details does not grant teacher permissions.</p>
       <p class="settings-account-status" id="settings-account-status" role="status" aria-live="polite"></p>
     </section>
+  </dialog>
+  <dialog class="cosmic-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-top"><h2 id="help-title">Workspace help</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close help"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <h3>Find a past conversation</h3>
+    <p>Choose the search icon beside Recent in the sidebar. You can search titles and messages saved in this browser.</p>
+    <h3>Chat shortcuts</h3>
+    <dl class="help-shortcuts">
+      <div><dt>New chat</dt><dd><kbd>Ctrl</kbd> or <kbd>⌘</kbd> + <kbd>K</kbd></dd></div>
+      <div><dt>Send a message</dt><dd><kbd>Enter</kbd></dd></div>
+      <div><dt>Start a new line</dt><dd><kbd>Shift</kbd> + <kbd>Enter</kbd></dd></div>
+    </dl>
   </dialog>
   <dialog class="cosmic-dialog breathing-dialog" id="breathing-dialog" aria-labelledby="breathing-title">
     <div class="dialog-top"><h2 id="breathing-title">Breathing exercise</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close breathing exercise"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>

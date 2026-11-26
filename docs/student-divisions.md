@@ -25,7 +25,7 @@ The initial class supported by the reviewed database remains **25CS**, with divi
 ## How students join
 
 1. Sign in with a student account.
-2. Open **Settings → Student details**.
+2. Select your name or avatar at the bottom of the sidebar, then choose **Profile**.
 3. Enter full name, roll number, class 25CS and division A/B/C, then save.
 4. The form shows **Pending — waiting for teacher approval**. Saving details does not approve membership.
 

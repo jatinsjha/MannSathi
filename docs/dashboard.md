@@ -1,6 +1,6 @@
 # Homepage dashboard
 
-The signed-in workspace opens on **My progress**, using quiet neutral surfaces and a restrained teal accent drawn from the existing MannSathi logo. Teachers see **Class overview**. Chat, Tasks, Smart Calendar, Focus Room and Settings remain available in the sidebar, which can collapse to an icon rail on desktop and reopen from the top bar.
+The signed-in workspace opens on **My progress**, using quiet neutral surfaces and a restrained teal accent drawn from the existing MannSathi logo. Teachers see **Class overview**. The sidebar links to Chat, Tasks, Smart Calendar and Focus Room. Select your name or avatar at the bottom to open Settings. On desktop, the avatar also opens the account menu when the sidebar is collapsed.
 
 The dashboard reads the current account's saved data:
 

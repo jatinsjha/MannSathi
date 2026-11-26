@@ -93,8 +93,10 @@
     });
     window.addEventListener("mannsathi:context", load);
     window.addEventListener("mannsathi:session-reset", clear);
-    $("settings-button").addEventListener("click", () => { if (!saving) load(); });
-    document.querySelectorAll("[data-open-settings]").forEach(button => button.addEventListener("click", () => { if (!saving) load(); }));
+    document.querySelectorAll("[data-open-settings]").forEach(button => button.addEventListener("click", () => {
+        tab(button.dataset.openSettings);
+        openDialog("settings-dialog");
+    }));
     $("student-profile-form").addEventListener("input", () => { dirty = true; });
     $("student-profile-form").addEventListener("change", () => { dirty = true; });
     dialog.addEventListener("close", () => { dirty = false; });

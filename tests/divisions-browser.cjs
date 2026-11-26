@@ -35,7 +35,10 @@ const stubSdk = `(() => {
   const scheduleInterval = window.setInterval.bind(window);
   window.__testNotificationPoll = null;
   window.setInterval = (callback, milliseconds, ...args) => {
-    if(milliseconds === 30000 && String(callback).includes('refreshNotifications')) window.__testNotificationPoll = () => callback(...args);
+    if(milliseconds === 30000 && String(callback).includes('refreshNotifications')) {
+      window.__testNotificationPoll = () => callback(...args);
+      return 0;
+    }
     return scheduleInterval(callback, milliseconds, ...args);
   };
   const label = () => { const value=localStorage.getItem('tasks-test-user'); return value==='none' ? null : value || 'A'; };
@@ -210,7 +213,7 @@ async function deleteTask(id, cancel=false) {
   await click('#task-delete-confirm');await waitFor('!document.getElementById("task-dialog").open');await taskReady();assert(!tasks.has(id));
 }
 async function details(label, name, roll, division, expected='pending') {
-  await switchUser(label); await click('#settings-button'); await click('[data-settings-tab="profile"]');
+  await switchUser(label); await click('#user-profile-card'); await click('#account-menu [data-open-settings="profile"]');
   await waitFor('!document.getElementById("student-profile-section").hidden && document.querySelectorAll("#profile-class option").length > 0');
   await fill({'profile-name':name,'profile-roll':roll,'profile-class':'25cs','profile-division':division});
   await evaluate('document.getElementById("student-profile-form").requestSubmit()');
@@ -224,9 +227,10 @@ async function rosterReady(user, division) {
   if(user) await waitFor(`(()=>{const row=document.querySelector('[data-enrollment-user="${user}"]');const button=document.querySelector('[data-enrollment-approve="${user}"]');return row?.dataset.enrollmentDivision === ${JSON.stringify(division)} && !!button && !button.disabled;})()`);
 }
 async function refreshRoster(user, division) {
-  if(!await evaluate('document.getElementById("notifications-dialog").open')) await click('#notifications-button');
+  if(await evaluate('document.getElementById("notifications-dialog").open')) await click('#roster-refresh');
+  else await click('#notifications-button');
   await waitFor('document.getElementById("notifications-dialog").open');
-  await click('#roster-refresh');await rosterReady(user, division);
+  await rosterReady(user, division);
 }
 async function enrollmentChecks() {
   await switchUser('T'); await waitFor('!document.getElementById("teacher-roster-section").hidden');
@@ -296,7 +300,7 @@ async function settingsAndLayout() {
     const bounds=await evaluate('(()=>{const d=document.getElementById("task-dialog"),r=d.getBoundingClientRect();return {left:r.left,right:r.right,width:innerWidth,scroll:d.scrollWidth,client:d.clientWidth};})()');
     assert(bounds.left>=0&&bounds.right<=bounds.width+1&&bounds.scroll<=bounds.client+1);await screenshot('division-editor-'+width);await click('#task-dialog [data-task-close]');
   }
-  await viewport(1440,900);await switchUser('A');await click('#settings-button');await click('[data-settings-tab="account"]');
+  await viewport(1440,900);await switchUser('A');await click('#user-profile-card');await click('#settings-button');
   await waitFor('document.getElementById("settings-account-email").textContent.includes("a@example.test")');await click('#settings-password-reset');
   await waitFor('window.__resetEmail === "a@example.test"');
   await click('[data-settings-tab="appearance"]');assert.equal(await evaluate('document.querySelector("[data-settings-panel=appearance]").hidden'),false);
@@ -309,7 +313,9 @@ async function settingsAndLayout() {
       assert(bounds.left>=0&&bounds.right<=bounds.width+1&&bounds.scroll<=bounds.client+1);await screenshot('student-settings-'+theme+'-'+width);
     }
   }
-  await click('#settings-dialog [data-close-dialog]');await viewport(1440,900);await switchUser('T');await click('#settings-button');await click('[data-settings-tab="profile"]');
+  await click('#settings-dialog [data-close-dialog]');await viewport(1440,900);await switchUser('T');await click('#user-profile-card');
+  assert.equal(await evaluate('document.querySelector(\'#account-menu [data-open-settings="profile"]\').getClientRects().length'),0);
+  await click('#settings-button');await click('[data-settings-tab="profile"]');
   await waitFor('document.getElementById("student-profile-section").hidden');assert.equal(await evaluate('document.getElementById("student-profile-section").hidden'),true);
   await click('#settings-dialog [data-close-dialog]');
   console.log('PASS persisted profile names, safe roster text, own-account reset, settings sections and responsive settings/division dialogs');

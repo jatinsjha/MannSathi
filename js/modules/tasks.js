@@ -22,7 +22,7 @@
     function canEdit(task) { return task.created_by === context?.user_id; }
     function complete(task) { return isTeacher() && task.audience !== "personal" ? task.recipient_count > 0 && task.completed_count === task.recipient_count : task.status === "completed"; }
     function overdue(task) { return !complete(task) && task.due_at && new Date(task.due_at).getTime() < Date.now(); }
-    function resetPrivate() {
+    function resetPrivate(identity = null) {
         epoch++; loadId++; rosterLoadId++; context = null; tasks = []; notifications = []; seen = null; enrollmentSeen = null; unreadCount = 0;
         loading = false; notificationLoading = false;
         $("tasks-list").replaceChildren(); $("notifications-list").replaceChildren();
@@ -31,7 +31,7 @@
         enrollments = [];
         $("teacher-roster-section").hidden = true;
         $("enrollment-list").replaceChildren(); $("approved-roster-list").replaceChildren();
-        window.dispatchEvent(new CustomEvent("mannsathi:session-reset"));
+        window.dispatchEvent(new CustomEvent("mannsathi:session-reset", { detail: identity }));
     }
     function sessionFailure(error) {
         if (error.status !== 401 && error.status !== 403) return false;
@@ -49,7 +49,6 @@
             if (!isTeacher()) { enrollments = []; $("enrollment-list").replaceChildren(); $("approved-roster-list").replaceChildren(); }
             window.dispatchEvent(new CustomEvent("mannsathi:context", { detail: result }));
             $("tasks-create").disabled = false; $("notifications-button").disabled = false;
-            $("account-type").textContent = isTeacher() ? "Teacher account" : "Student account";
             $("tasks-role-note").textContent = isTeacher() ? "Assign work to your classes or an individual student." : "Your personal tasks and work assigned by your teachers.";
             await refreshNotifications();
             if (current !== epoch) return;
@@ -403,7 +402,13 @@
         let lastUser = null;
         client.auth.onAuthStateChange((event, session) => {
             const next = session?.user?.id || null;
-            if (next !== lastUser || event === "SIGNED_OUT") { lastUser = next; resetPrivate(); setTimeout(initialize, 0); }
+            if (next !== lastUser || event === "SIGNED_OUT") {
+                lastUser = next;
+                const name = session?.user?.user_metadata?.full_name;
+                const fullName = (typeof name === "string" && name.trim()) || session?.user?.email?.split("@")[0];
+                resetPrivate(next ? { user_id: next, full_name: fullName } : null);
+                setTimeout(initialize, 0);
+            }
         });
     }).catch(() => {});
 })();
