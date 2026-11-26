@@ -16,7 +16,10 @@ const mobileMenuButton = document.getElementById("mobile-menu");
 const searchInput = document.getElementById("conversation-search");
 const historySearch = document.getElementById("history-search");
 const titleEl = document.getElementById("conversation-title");
-const KEY = "mannsathi_chats";
+const guestChat = new URLSearchParams(location.search).get("guest") === "true";
+let chatOwner = guestChat ? "guest" : null;
+let chatGeneration = 0;
+let guestHistory = [];
 const conversation = [];
 let currentChatId = null;
 let userInitial = "S";
@@ -27,13 +30,17 @@ let breathingTimer;
 let accountName = null, accountRole = null;
 
 function loadChats() {
+    if (!chatOwner) return [];
+    if (guestChat) return guestHistory;
     try {
-        const chats = JSON.parse(localStorage.getItem(KEY));
+        const chats = JSON.parse(localStorage.getItem("mannsathi.chats." + chatOwner));
         return Array.isArray(chats) ? chats.filter(c => c && Array.isArray(c.messages) && typeof c.title === "string") : [];
     } catch { return []; }
 }
 function saveChats(chats) {
-    try { localStorage.setItem(KEY, JSON.stringify(chats)); }
+    if (!chatOwner) return;
+    if (guestChat) { guestHistory = chats; return; }
+    try { localStorage.setItem("mannsathi.chats." + chatOwner, JSON.stringify(chats)); }
     catch { showToast("Couldn't save chat history in this browser."); }
 }
 function chatTitle(msgs) {
@@ -212,7 +219,7 @@ function scrollToMessage(wrap) {
     const area = document.getElementById("chat-area");
     requestAnimationFrame(() => area.scrollTo({ top: area.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }));
 }
-function renderMessage(role, text, error = false) {
+function renderMessage(role, text, error = false, retryAttempt = null) {
     welcome.hidden = true;
     const wrap = document.createElement("div");
     wrap.className = "message " + role + (error ? " error" : "");
@@ -220,13 +227,13 @@ function renderMessage(role, text, error = false) {
         wrap.innerHTML = `<div class="msg-avatar">${escHtml(userInitial)}</div><div class="msg-content"><div class="msg-meta">You</div><div class="msg-bubble">${escHtml(text)}</div></div>`;
         window.MannSathiAvatars?.paint(wrap.querySelector(".msg-avatar"), avatarUserId);
     } else {
-        wrap.innerHTML = `<div class="msg-avatar"><img src="images/logo.png" alt="" width="32" height="32"></div><div class="msg-content"><div class="msg-label">${error ? "Connection error" : "MannSathi"}</div><div class="msg-body">${formatReply(text)}</div></div>`;
+        wrap.innerHTML = `<div class="msg-avatar"><img src="images/logo.png" alt="" width="32" height="32"></div><div class="msg-content"><div class="msg-label">${error ? "AI chat unavailable" : "MannSathi"}</div><div class="msg-body">${formatReply(text)}</div></div>`;
         if (error) {
             const retry = document.createElement("button");
             retry.type = "button";
             retry.className = "retry-button";
             retry.textContent = "Try again";
-            retry.addEventListener("click", () => { if (!isBusy) requestReply(); });
+            retry.addEventListener("click", () => { if (!isBusy) requestReply(retryAttempt); });
             wrap.querySelector(".msg-content").appendChild(retry);
         } else {
             const actions = document.createElement("div");
@@ -255,10 +262,10 @@ function renderMessage(role, text, error = false) {
                     showToast("Only the latest reply can be regenerated.");
                     return;
                 }
-                conversation.pop();
+                const prior = conversation.pop();
                 wrap.remove();
                 saveCurrentChat();
-                requestReply();
+                requestReply({ retry_of: prior.request_id });
             });
         }
     }
@@ -281,44 +288,52 @@ function resizeInput() {
     document.getElementById("char-count").textContent = input.value.length + " / 4000";
     document.querySelector(".composer-wrap").classList.toggle("has-text", !!input.value.length);
 }
-async function requestReply() {
-    if (isBusy || !conversation.length) return;
+async function requestReply(attempt = null) {
+    if (isBusy || !conversation.length || !chatOwner) return;
+    const generation = chatGeneration;
     isBusy = true;
     sendButton.disabled = true;
     sendButton.classList.add("loading");
     form.setAttribute("aria-busy", "true");
     messages.querySelectorAll(".message.error").forEach(el => el.remove());
     showTypingIndicator();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const request = { request_id: attempt?.request_id || crypto.randomUUID(), retry_of: attempt?.retry_of };
     try {
-        const response = await fetch("/api/chat", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: conversation.slice(-12) }),
-            signal: controller.signal
+        const data = await window.MannSathiAPI.request("/api/chat", {
+            method: "POST", expectedUserId: guestChat ? undefined : chatOwner,
+            body: { ...request, messages: conversation.slice(-12).map(({ role, text }) => ({ role, text })) }
         });
-        const data = await response.json();
-        if (!response.ok || !data.reply?.trim()) throw new Error("No reply");
-        conversation.push({ role: "assistant", text: data.reply });
+        if (generation !== chatGeneration) return;
+        if (!data.reply?.trim()) throw new Error("MannSathi could not return a reply.");
+        conversation.push({ role: "assistant", text: data.reply, request_id: request.request_id });
         document.getElementById("typing-indicator")?.remove();
         renderMessage("assistant", data.reply);
         saveCurrentChat();
-    } catch {
+    } catch (error) {
+        if (generation !== chatGeneration) return;
         document.getElementById("typing-indicator")?.remove();
-        renderMessage("assistant", "Couldn't connect. Please try again.", true);
+        // A lost response reuses its ID. A confirmed attempt gets a linked, user-initiated retry.
+        const retry = error.data?.retryable_attempt && error.data.request_id === request.request_id
+            ? { retry_of: request.request_id } : request;
+        renderMessage("assistant", error.message || "Couldn't connect. Please try again.", true, retry);
         saveCurrentChat();
     } finally {
-        clearTimeout(timeout);
-        isBusy = false;
-        sendButton.disabled = false;
-        sendButton.classList.remove("loading");
-        form.removeAttribute("aria-busy");
-        if (accountMenu.hidden && !document.querySelector("dialog[open]") && window.innerWidth > 760) input.focus({ preventScroll: true });
+        if (generation === chatGeneration) {
+            endReply();
+            if (accountMenu.hidden && !document.querySelector("dialog[open]") && window.innerWidth > 760) input.focus({ preventScroll: true });
+        }
     }
+}
+function endReply() {
+    isBusy = false;
+    sendButton.disabled = false;
+    sendButton.classList.remove("loading");
+    form.removeAttribute("aria-busy");
 }
 function send(rawText) {
     const text = rawText.trim();
     if (!text || isBusy) return;
+    if (!chatOwner) { showToast("Sign in to send a chat message."); return; }
     if (window.MannSathiWorkspace && !window.MannSathiWorkspace.show("chat")) return;
     if (text.length > 4000) { showToast("Keep your message under 4,000 characters."); return; }
     messages.querySelectorAll(".message.error").forEach(el => el.remove());
@@ -329,10 +344,7 @@ function send(rawText) {
     saveCurrentChat();
     requestReply();
 }
-function clearConversation(save = true) {
-    if (!canNavigate()) return;
-    window.MannSathiWorkspace?.show("chat");
-    if (save) saveCurrentChat();
+function resetConversation() {
     currentChatId = null;
     conversation.length = 0;
     messages.replaceChildren();
@@ -340,10 +352,29 @@ function clearConversation(save = true) {
     titleEl.textContent = "New chat";
     input.value = "";
     resizeInput();
-    closeSidebar();
     renderHistory();
     document.getElementById("chat-area").scrollTop = 0;
+}
+function clearConversation(save = true) {
+    if (!canNavigate()) return;
+    window.MannSathiWorkspace?.show("chat");
+    if (save) saveCurrentChat();
+    resetConversation();
+    closeSidebar();
     if (window.innerWidth > 760) input.focus({ preventScroll: true });
+}
+function clearChatScreen() {
+    chatGeneration++;
+    endReply();
+    searchInput.value = "";
+    document.getElementById("clear-dialog").close();
+    resetConversation();
+}
+function changeChatAccount(session) {
+    const next = session?.access_token && !session.user?.is_anonymous ? session.user?.id || null : null;
+    if (chatOwner === next) return;
+    chatOwner = next;
+    clearChatScreen();
 }
 function accountMenuItems() {
     return [...accountMenu.querySelectorAll('[role="menuitem"]:not([hidden])')];
@@ -525,3 +556,23 @@ breathStart.addEventListener("click", () => {
 document.getElementById("breathing-dialog").addEventListener("close", () => stopBreathing());
 renderHistory();
 resizeInput();
+if (!guestChat && window.supabaseReady) window.supabaseReady.then(async client => {
+    let changes = 0;
+    client.auth.onAuthStateChange((event, session) => {
+        changes++;
+        changeChatAccount(event === "SIGNED_OUT" ? null : session);
+    });
+    async function syncChatAccount() {
+        const previous = changes;
+        const {data, error} = await client.auth.getSession();
+        if (!error && changes === previous) changeChatAccount(data?.session);
+    }
+    window.addEventListener("pagehide", event => {
+        if (event.persisted) { changes++; changeChatAccount(null); }
+    });
+    window.addEventListener("pageshow", event => {
+        if (event.persisted) syncChatAccount().catch(() => {});
+    });
+    await syncChatAccount();
+}).catch(() => {});
+if (guestChat) window.addEventListener("pagehide", () => { guestHistory = []; clearChatScreen(); });

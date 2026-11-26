@@ -2,7 +2,7 @@
 (function () {
     "use strict";
     let current = "dashboard";
-    const panels = { dashboard: "dashboard-panel", chat: "chat-area", calendar: "calendar-panel", tasks: "tasks-panel", focus: "focus-panel" };
+    const panels = { dashboard: "dashboard-panel", chat: "chat-area", calendar: "calendar-panel", tasks: "tasks-panel", focus: "focus-panel", admin: "admin-panel" };
     function show(view) {
         if (!panels[view] || (typeof canNavigate === "function" && !canNavigate())) return false;
         for (const [name, id] of Object.entries(panels)) {
@@ -13,7 +13,7 @@
         document.querySelector(".composer-wrap").hidden = view !== "chat";
         document.getElementById("conversation-title").hidden = view !== "chat";
         const skip = document.querySelector(".skip-link");
-        skip.href = "#" + ({ dashboard: "dashboard-heading", chat: "message-input", calendar: "calendar-create", tasks: "tasks-create", focus: "focus-start" })[view];
+        skip.href = "#" + ({ dashboard: "dashboard-heading", chat: "message-input", calendar: "calendar-create", tasks: "tasks-create", focus: "focus-start", admin: "admin-heading" })[view];
         skip.textContent = "Skip to " + view;
         current = view;
         if (typeof closeSidebar === "function") closeSidebar();

@@ -3,6 +3,9 @@ const fs = require('node:fs'), path = require('node:path'), http = require('node
 const { launch } = require('./browser-driver.cjs');
 const root = path.resolve(__dirname, '..'), output = path.join(root, '.preview', 'sidebar-screenshots');
 let browser, base;
+let chatOutcome = 'success';
+const chatRequests = [];
+let releaseChat;
 const users = { A: '00000000-0000-4000-8000-000000000001', B: '00000000-0000-4000-8000-000000000002' };
 const sdk = `(()=>{const ids=${JSON.stringify(users)},callbacks=[];const current=()=>{const key=localStorage.getItem('sidebar-test-user')||'A';return key==='none'?null:{access_token:'test-'+key,user:{id:ids[key],email:key+'@example.test',user_metadata:{full_name:'Student '+key}}};};window.__testSetUser=key=>{localStorage.setItem('sidebar-test-user',key||'none');callbacks.forEach(cb=>cb(key?'SIGNED_IN':'SIGNED_OUT',current()));};window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:current()}}),getUser:async()=>({data:{user:current()?.user}}),onAuthStateChange:cb=>{callbacks.push(cb);setTimeout(()=>cb('INITIAL_SESSION',current()),0);return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>{window.__testSetUser(null);return {};}}})};})();`;
 function json(res, status, data) { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); }
@@ -10,7 +13,24 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     if (url.pathname === '/api/config') return json(res, 200, { supabaseUrl: 'https://fixture.supabase.co', supabaseKey: 'sb_publishable_fixture' });
     if (url.pathname === '/test-supabase.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(sdk); return; }
-    if (url.pathname === '/api/chat') return json(res, 200, { reply: 'Local fixture reply.' });
+    if (url.pathname === '/api/chat') {
+        let raw = '';
+        req.on('data', chunk => { raw += chunk; });
+        req.on('end', () => {
+            const body = JSON.parse(raw);
+            chatRequests.push({ body, authorization: req.headers.authorization });
+            if (chatOutcome === 'delayed') {
+                releaseChat = () => json(res, 200, { reply: 'Late reply for student A.', request_id: body.request_id });
+                return;
+            }
+            if (chatOutcome === 'lost') { res.writeHead(502); res.end(); return; }
+            if (chatOutcome === 'limited') return json(res, 429, {
+                error: 'Daily AI limit reached.', request_id: body.request_id, retryable_attempt: true
+            });
+            json(res, 200, { reply: 'Local fixture reply.', request_id: body.request_id });
+        });
+        return;
+    }
     if (url.pathname.startsWith('/api/')) {
         const user = users[(req.headers.authorization || '').replace('Bearer test-', '')];
         if (!user) return json(res, 401, { error: 'Sign in again.' });
@@ -113,7 +133,19 @@ async function checkChatThemes(state) {
 (async () => {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     base = 'http://127.0.0.1:' + server.address().port; browser = await launch(output);
-    await browser.command('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('mannsathi.avatar.${users.A}','cat');localStorage.setItem('mannsathi.avatar.${users.B}','dog');localStorage.setItem('mannsathi.avatar.guest','frog');if(!localStorage.getItem('mannsathi_chats'))localStorage.setItem('mannsathi_chats',JSON.stringify([{id:123,title:'Saved conversation',messages:[{role:'user',text:'Hello from history'},{role:'assistant',text:'Saved reply'}],createdAt:new Date().toISOString()}]));}catch{}` });
+    await browser.command('Page.addScriptToEvaluateOnNewDocument', { source: `try {
+        localStorage.setItem('mannsathi.avatar.${users.A}','cat');
+        localStorage.setItem('mannsathi.avatar.${users.B}','dog');
+        localStorage.setItem('mannsathi.avatar.guest','frog');
+        const ownedKey = 'mannsathi.chats.${users.A}';
+        const saved = {id:123,title:'Saved conversation',messages:[{role:'user',text:'Hello from history'},{role:'assistant',text:'Saved reply'}],createdAt:new Date().toISOString()};
+        if (!sessionStorage.getItem('chat-fixture-initialized')) {
+            sessionStorage.setItem('chat-fixture-initialized','1');
+            localStorage.setItem(ownedKey,JSON.stringify([saved]));
+            localStorage.removeItem('mannsathi.chats.${users.B}');
+            localStorage.setItem('mannsathi_chats',JSON.stringify([{...saved,title:'Unattributed private history'}]));
+        }
+    } catch {}` });
     await browser.viewport(1440, 900); await browser.command('Page.navigate', { url: base + '/app.html' }); await ready();
     await assertView('dashboard'); assert.equal(await avatar('#user-avatar'), 'cat');
     await checkMenuClosed();
@@ -156,6 +188,23 @@ async function checkChatThemes(state) {
     await press('Enter');
     await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
     await checkChatThemes('populated');
+    const first = chatRequests.at(-1);
+    assert.equal(first.authorization, 'Bearer test-A');
+    assert.match(first.body.request_id, /^[a-f\d-]{36}$/i);
+    chatOutcome = 'lost';
+    await browser.click('.msg-action-regen');
+    await browser.wait('document.querySelector(".retry-button")');
+    const interrupted = chatRequests.at(-1).body;
+    assert.equal(interrupted.retry_of, first.body.request_id);
+    chatOutcome = 'limited';
+    await browser.click('.retry-button');
+    await browser.wait('document.querySelector(".message.error")?.textContent.includes("Daily AI limit reached.")');
+    assert.equal(chatRequests.at(-1).body.request_id, interrupted.request_id, 'Transport retries must reuse the identifier.');
+    chatOutcome = 'success';
+    await browser.click('.retry-button');
+    await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
+    assert.equal(chatRequests.at(-1).body.retry_of, interrupted.request_id);
+    assert.notEqual(chatRequests.at(-1).body.request_id, interrupted.request_id);
     await browser.click('#open-dashboard'); await browser.click('#sidebar-toggle');
     assert.equal(await browser.evaluate('document.getElementById("sidebar-toggle").getAttribute("aria-expanded")'), 'false');
     assert.equal(await browser.evaluate('document.getElementById("sidebar-toggle").getAttribute("aria-label")'), 'Expand sidebar');
@@ -174,16 +223,41 @@ async function checkChatThemes(state) {
     await browser.click('#sidebar-toggle');
     assert.equal(await browser.evaluate('document.getElementById("sidebar-toggle").getAttribute("aria-expanded")'), 'true');
     await browser.click('.chat-item-open');
+    chatOutcome = 'delayed';
+    await browser.click('.msg-action-regen');
+    for (let i=0; !releaseChat && i<100; i++) await browser.delay(20);
+    assert.equal(typeof releaseChat,'function');
     await browser.evaluate('window.__testSetUser("B")');
     await browser.wait('document.querySelector("#user-avatar").dataset.avatar === "dog"');
     assert.equal(await avatar('#account-menu-avatar'), 'dog');
     assert.equal(await browser.evaluate('document.getElementById("account-menu-name").textContent'), 'Student B');
+    assert.equal(await browser.evaluate('document.querySelector("#messages").childElementCount'), 0);
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
+    releaseChat();
+    chatOutcome = 'success';
+    await browser.evaluate('send("Student B only")');
+    await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
+    assert.equal(chatRequests.at(-1).authorization, 'Bearer test-B');
+    assert.deepEqual(chatRequests.at(-1).body.messages, [{role:'user',text:'Student B only'}]);
     assert.equal(await avatar('.message.user .msg-avatar'), 'dog');
+    assert.doesNotMatch(await browser.evaluate('document.querySelector("#messages").textContent'), /Late reply|Hello from history|study break/);
+    await browser.evaluate('window.__testSetUser("A")');
+    await browser.wait('document.querySelector("#user-avatar").dataset.avatar === "cat"');
+    assert.match(await browser.evaluate('document.querySelector("#chat-history").textContent'), /Hello from history/);
+    assert.doesNotMatch(await browser.evaluate('document.querySelector("#chat-history").textContent'), /Student B only|Unattributed private history/);
     await browser.evaluate('window.__testSetUser(null)');
     await browser.wait('document.querySelector("#user-avatar").dataset.avatar === "frog"');
-    assert.equal(await avatar('.message.user .msg-avatar'), 'frog');
+    assert.equal(await browser.evaluate('document.querySelector("#messages").childElementCount'), 0);
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
+    assert.match(await browser.evaluate('localStorage.getItem("mannsathi_chats")'), /Unattributed private history/);
     console.log('PASS default dashboard, accessible skip link, history/New chat routing, collapsed rail persistence and account/guest avatar identity');
     await browser.command('Page.navigate', { url: base + '/app.html?guest=true' }); await ready();
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
+    await browser.evaluate('send("Guest page only")');
+    await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
+    assert.equal(chatRequests.at(-1).authorization, undefined);
+    await browser.command('Page.reload'); await ready();
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
     for (const [width, height] of [[390, 844], [320, 740]]) {
         await browser.viewport(width, height); await browser.click('#open-dashboard');
         await browser.evaluate('document.getElementById("mobile-menu").focus()'); await browser.click('#mobile-menu');

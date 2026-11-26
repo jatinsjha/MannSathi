@@ -25,5 +25,9 @@ vm.runInNewContext(fs.readFileSync('js/services/authenticated-api.js', 'utf8'), 
   await context.window.MannSathiAPI.request('/api/tasks');
   assert.equal(calls.length, 1);
   assert.equal(calls[0].headers.Authorization, 'Bearer token-B');
+  await assert.rejects(context.window.MannSathiAPI.request('/api/chat', {
+    method:'POST', expectedUserId:'student-A', body:{messages:[{role:'user',text:'A private history'}]}
+  }), error => error.status === 401 && /account changed/.test(error.message));
+  assert.equal(calls.length, 1, 'A pending chat history must match the actual user returned by getSession');
   console.log('PASS account-change save isolation and same-account token refresh');
 })().catch(error => { console.error(error); process.exitCode = 1; });

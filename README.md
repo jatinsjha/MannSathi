@@ -48,6 +48,8 @@ Teacher-scheduled calendar exams require [migration 005](database/migrations/005
 
 ## Getting Started
 
+AI administration extends the existing workspace with metered chat, student limits, request logs, Gemini quota observations, billing and an audit trail. Follow the [AI administration deployment guide](docs/ai-administration.md) for the manual database upgrade, first administrator, server-only key and optional Google imports.
+
 ### Prerequisites
 
 - Python 3.12
@@ -93,6 +95,7 @@ GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-3.5-flash-lite
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_supabase_publishable_or_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_secret_or_service_role_key
 ```
 
 Replace the placeholder with your own API key.
@@ -118,7 +121,7 @@ MannSathi is deployed on Vercel.
 To deploy your own instance:
 
 1. Import the repository through Vercel and keep the Root Directory set to the repository root.
-2. Configure `GEMINI_API_KEY`, `GEMINI_MODEL`, `SUPABASE_URL`, and a publishable/anon `SUPABASE_KEY` in the project's Environment Variables.
+2. Configure `GEMINI_API_KEY`, `GEMINI_MODEL`, `SUPABASE_URL`, a publishable/anon `SUPABASE_KEY`, and a server-only `SUPABASE_SERVICE_ROLE_KEY` in the project's Environment Variables. Apply the AI migrations in the deployment guide before switching chat traffic to this release.
 3. Review/apply required migrations and provision the intended teacher/class memberships. Deploy role-checked login and `/api/tasks` together with migration 002. Test the homepage, `/teacher-login.html`, `/app.html`, `POST /api/chat`, and authenticated Calendar/Task CRUD.
 
 Vercel serves the static pages and files directly and deploys the Python handlers at `/api/chat`, `/api/config`, `/api/calendar`, and `/api/tasks`; no frontend build or rewrite rules are introduced. Install the Python requirements, including IANA timezone data. Teacher and student login still use the same Supabase Auth service; database permissions determine access.

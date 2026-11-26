@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/modules/settings.css">
   <link rel="stylesheet" href="css/modules/focus.css">
   <link rel="stylesheet" href="css/modules/dashboard.css">
+  <link rel="stylesheet" href="css/modules/admin.css">
 </head>
 <body class="workspace">
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
@@ -65,6 +66,7 @@
             <button class="space-nav-link" id="open-calendar" type="button" aria-label="Calendar" title="Calendar"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Calendar</span></button>
             <button class="space-nav-link" id="open-tasks" type="button" aria-label="Tasks" title="Tasks"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>Tasks</span></button>
             <button class="space-nav-link" id="open-focus" type="button" aria-label="Focus Room" title="Focus Room"><svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg><span>Focus Room</span></button>
+            <button class="space-nav-link" id="open-admin" type="button" aria-label="AI administration" title="AI administration" hidden><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>AI administration</span></button>
           </nav>
           <div class="sidebar-conversations">
             <div class="conv-section-header">
@@ -121,6 +123,15 @@
             </button>
           </div>
         </header>
+        <section id="admin-panel" class="admin-panel" aria-labelledby="admin-heading" hidden>
+          <div class="admin-inner">
+            <header class="admin-header"><div><p>Administration</p><h1 id="admin-heading" tabindex="-1">AI overview</h1></div><button class="dashboard-button" id="admin-refresh" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Refresh</button></header>
+            <nav class="admin-nav" id="admin-sections" aria-label="AI administration sections"></nav>
+            <div id="admin-filters"></div>
+            <p id="admin-status" class="admin-status" role="status"></p>
+            <div id="admin-content" aria-busy="false"></div>
+          </div>
+        </section>
         <section class="dashboard-panel" id="dashboard-panel" aria-labelledby="dashboard-heading">
           <header class="dashboard-header">
             <div><p class="dashboard-eyebrow" id="dashboard-greeting">A little progress, every day</p><h1 id="dashboard-heading" tabindex="-1">My progress</h1><p id="dashboard-subheading">Your study time, goals and what's coming next</p></div>
@@ -269,7 +280,7 @@
         <button type="button" data-theme-choice="dark" aria-pressed="true"><span class="theme-swatch midnight"></span><strong>Dark</strong></button>
         <button type="button" data-theme-choice="light" aria-pressed="false"><span class="theme-swatch dawn"></span><strong>Light</strong></button>
       </div>
-      <p class="settings-note">Chats are saved in this browser.</p>
+      <p class="settings-note">Signed-in chats are saved in this browser for your account. Guest chats last until this page closes or reloads.</p>
       <button class="dialog-text-button" id="settings-clear-history" type="button">Clear chat history</button>
     </section>
     <section class="settings-section" id="settings-profile-panel" data-settings-panel="profile" aria-labelledby="settings-profile-title" hidden>
@@ -318,7 +329,7 @@
   </dialog>
   <dialog class="cosmic-dialog" id="clear-dialog" aria-labelledby="clear-title">
     <div class="dialog-top"><h2 id="clear-title">Clear chat history?</h2><button class="icon-button" type="button" data-close-dialog aria-label="Keep chats"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
-    <p>All saved chats will be removed from this browser.</p>
+    <p>Clear the saved conversations for your current account or guest session?</p>
     <div class="dialog-actions"><button class="guest-button" type="button" data-close-dialog>Cancel</button><button class="primary-button" id="confirm-clear-history" type="button">Clear history</button></div>
   </dialog>
   <dialog class="cosmic-dialog calendar-event-dialog" id="calendar-event-dialog" aria-labelledby="calendar-event-title">
@@ -453,5 +464,6 @@
   <script src="js/utils/focus-clock.js"></script>
   <script src="js/modules/focus.js"></script>
   <script src="js/modules/dashboard.js"></script>
+  <script type="module" src="js/modules/admin.js"></script>
 </body>
 </html>
