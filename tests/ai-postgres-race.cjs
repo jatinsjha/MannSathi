@@ -13,7 +13,7 @@ const binaries = process.env.PG_BIN_DIR || path.join(preview, 'ai-postgres/node_
 const suffix = process.platform === 'win32' ? '.exe' : '';
 const { Client } = require(process.env.PG_MODULE_PATH || path.join(preview, 'ai-postgres/node_modules/pg'));
 const owner = randomUUID(), student = randomUUID();
-const reserveSql = "select mannsathi_ai_reserve($1,$2,null,'model','chat',$3) as result";
+const reserveSql = "select mannsathi_ai_pilot_reserve($1,$2,null,'model','chat',$3) as result";
 
 async function loopbackPort() {
   const socket = net.createServer();
@@ -61,13 +61,19 @@ async function main() {
     await observer.query(`
       create role service_role nologin bypassrls;
       create role anon nologin; create role authenticated nologin;
-      create schema auth; create table auth.users(id uuid primary key,is_anonymous boolean default false);
+      create schema auth; create table auth.users(id uuid primary key,is_anonymous boolean default false,email text,raw_user_meta_data jsonb);
+      create table profiles(id uuid primary key,full_name text);
+      create table batch_permissions(user_id uuid,batch_code text,division text,status text);
       create table teacher_permissions(user_id uuid references auth.users);
       create table calendar_exams(id uuid primary key);
     `);
-    await observer.query(fs.readFileSync(path.resolve(__dirname,'../database/migrations/006_ai_control.sql'),'utf8'));
+    const migrations = path.resolve(__dirname,'../database/migrations');
+    for (const file of fs.readdirSync(migrations).filter(name=>/^(00[6-9]|010)_/.test(name)).sort()) {
+      await observer.query(fs.readFileSync(path.join(migrations,file),'utf8'));
+    }
     await observer.query('insert into auth.users(id) values($1),($2)', [owner,student]);
     await observer.query('insert into ai_admins(user_id) values($1)', [owner]);
+    await observer.query("select mannsathi_ai_review_pilot($1,$2,true)",[owner,student]);
     await observer.query("select mannsathi_ai_admin_change($1,'global',null,$2,null)", [owner,{daily_token_limit:10}]);
 
     // Second connection starts before commit and must see the first reservation.
@@ -84,12 +90,22 @@ async function main() {
     // take effect before that in-flight request can invoke the generation API.
     await first.query('begin');
     await first.query("select mannsathi_ai_admin_change($1,'student',$2,$3,null)", [owner,student,{restricted:true}]);
-    const resize = second.query('select mannsathi_ai_resize($1,7) as result', [id]);
+    const resize = second.query('select mannsathi_ai_pilot_resize($1,7) as result', [id]);
     await assertWaiting(observer, 'second');
     await first.query('commit');
     assert.equal((await resize).rows[0].result.code,'student_restricted');
     assert.equal((await observer.query("select charged_tokens::integer as tokens from ai_daily_counters where scope_key='global'")).rows[0].tokens, 0);
-    console.log('PASS native two-session PostgreSQL lock contention, committed capacity and concurrent admin restriction');
+    await first.query("select mannsathi_ai_admin_change($1,'student',$2,$3,null)",[owner,student,{restricted:false}]);
+    const pendingId = randomUUID();
+    assert.equal((await first.query(reserveSql,[pendingId,student,1])).rows[0].result.allowed,true);
+    await first.query('begin');
+    await first.query('select mannsathi_ai_review_pilot($1,$2,false)',[owner,student]);
+    const revoked = second.query('select mannsathi_ai_pilot_resize($1,7) as result',[pendingId]);
+    await assertWaiting(observer,'second');
+    await first.query('commit');
+    assert.equal((await revoked).rows[0].result.code,'ai_unavailable');
+    assert.equal((await observer.query("select charged_tokens::integer as tokens from ai_daily_counters where scope_key='global'")).rows[0].tokens,0);
+    console.log('PASS native two-session PostgreSQL lock contention, committed capacity, concurrent restriction and pilot revocation');
   } finally {
     // Close a lock holder before its waiter if an assertion interrupted the test.
     for (const client of clients) await client.end();

@@ -1,8 +1,11 @@
 """Supabase access for trusted AI endpoints. Never return server credentials to callers."""
 import base64
+import hashlib
+import hmac
 import json
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -24,14 +27,49 @@ def configured_model():
     return model
 
 
-def verified_user_id(headers):
+def verified_account(headers):
     """Always ask Supabase Auth to verify the bearer token, including its subject."""
     try:
-        return authenticate(headers).user_id
+        return authenticate(headers)
     except ApiError as exc:
         if exc.status in (401, 403):
             raise ApiError(exc.status, "Sign in with your MannSathi account to continue.") from None
         raise ApiError(503, "Sign-in verification is temporarily unavailable.") from None
+
+
+def verified_user_id(headers):
+    return verified_account(headers).user_id
+
+
+def session_has_mfa(account):
+    """Read the AAL of the same bearer that Supabase /auth/v1/user just verified."""
+    try:
+        header, payload, signature = account.token.split(".")
+        if not header or not signature:
+            return False
+        claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+        return isinstance(claims, dict) and claims.get("sub") == account.user_id and claims.get("aal") == "aal2"
+    except (ValueError, UnicodeError, TypeError):
+        return False
+
+
+def paid_pilot_configured():
+    """An operator confirms Paid Services for this specific project/key pair."""
+    project = os.environ.get("GEMINI_CLOUD_PROJECT", "").strip()
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    reviewed = os.environ.get("GEMINI_PAID_PROJECT_ATTESTATION", "").strip()
+    until = os.environ.get("GEMINI_PAID_REVIEW_UNTIL", "").strip()
+    if not key or not re.fullmatch(r"[a-z][a-z0-9-]{4,28}[a-z0-9]", project) or not re.fullmatch(r"[0-9a-f]{64}", reviewed):
+        return False
+    try:
+        expires = datetime.strptime(until, "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    today = datetime.now(timezone.utc).date()
+    if not today <= expires <= today + timedelta(days=30):
+        return False
+    actual = hashlib.sha256((project + "\n" + key).encode()).hexdigest()
+    return hmac.compare_digest(reviewed, actual)
 
 
 def _server_key():
@@ -78,6 +116,9 @@ def rpc(name, payload):
             code = None
         if exc.code in messages and code == f"PT{exc.code}":
             raise ApiError(exc.code, messages[exc.code]) from None
+        if name == "mannsathi_ai_report" and code == "25006":
+            raise ApiError(503, "Supabase opened the AI report in a read-only transaction. "
+                           "Check migration 009 and refresh the PostgREST schema cache.") from None
         raise ApiError(503, "AI usage storage is unavailable. Check the migrations and server configuration.") from None
     except (OSError, ValueError, URLError):
         raise ApiError(503, "AI usage storage could not be reached. Please retry.") from None

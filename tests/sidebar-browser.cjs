@@ -4,6 +4,7 @@ const { launch } = require('./browser-driver.cjs');
 const root = path.resolve(__dirname, '..'), output = path.join(root, '.preview', 'sidebar-screenshots');
 let browser, base;
 let chatOutcome = 'success';
+let availability = true;
 const chatRequests = [];
 let releaseChat;
 const users = { A: '00000000-0000-4000-8000-000000000001', B: '00000000-0000-4000-8000-000000000002' };
@@ -14,6 +15,7 @@ const server = http.createServer((req, res) => {
     if (url.pathname === '/api/config') return json(res, 200, { supabaseUrl: 'https://fixture.supabase.co', supabaseKey: 'sb_publishable_fixture' });
     if (url.pathname === '/test-supabase.js') { res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(sdk); return; }
     if (url.pathname === '/api/chat') {
+        if (req.method === 'GET') return availability === null ? json(res,503,{error:'Discovery offline'}) : json(res,200,{available:availability});
         let raw = '';
         req.on('data', chunk => { raw += chunk; });
         req.on('end', () => {
@@ -54,7 +56,7 @@ const server = http.createServer((req, res) => {
     if (!file.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }
     try {
         let data = fs.readFileSync(file);
-        if (path.extname(file) === '.html') data = Buffer.from(data.toString('utf8').replace('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', '/test-supabase.js'));
+        if (path.extname(file) === '.html') data = Buffer.from(data.toString('utf8').replace('js/vendor/supabase-2.119.2/supabase.js', '/test-supabase.js'));
         res.writeHead(200, { 'Content-Type': { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream' }); res.end(data);
     } catch { res.writeHead(404); res.end(); }
 });
@@ -105,7 +107,8 @@ async function checkSettingsFromMenu(selector, tab, returnFocus) {
     assert.equal(await browser.evaluate(`document.querySelector('[data-settings-panel="${tab}"]').hidden`), false);
     await checkMenuClosed();
     await clickVisible('#settings-dialog [data-close-dialog]');
-    await browser.wait(`document.activeElement.id === ${JSON.stringify(returnFocus)}`);
+    try { await browser.wait(`document.activeElement.id === ${JSON.stringify(returnFocus)}`); }
+    catch { throw new Error('Closing settings from ' + selector + ' focused ' + await browser.evaluate('document.activeElement.tagName + "#" + document.activeElement.id') + '; expected ' + returnFocus); }
 }
 async function checkChatThemes(state) {
     const selectors = state === 'empty' ? ['.prompt-chip'] : ['.msg-bubble', '.message.assistant .msg-body'];
@@ -168,6 +171,8 @@ async function checkChatThemes(state) {
     await checkSettingsFromMenu('#account-menu [data-open-settings="appearance"]', 'appearance', 'user-profile-card');
     await clickVisible('#sidebar-username');
     await clickVisible('#account-help');
+    assert.equal(await browser.evaluate('document.querySelectorAll("#help-menu a").length'), 8);
+    await clickVisible('#help-menu [data-help-topic="help-center"]');
     assert.equal(await browser.evaluate('document.getElementById("help-dialog").open'), true);
     await clickVisible('#help-dialog [data-close-dialog]');
     await browser.wait('document.activeElement.id === "user-profile-card"');
@@ -176,16 +181,33 @@ async function checkChatThemes(state) {
     await browser.command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter' });
     await browser.command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter' });
     assert.equal(await browser.evaluate('document.activeElement.id'), 'dashboard-heading');
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
+    await browser.click('#open-earlier-chats');
+    assert.doesNotMatch(await browser.evaluate('document.querySelector("#chat-history").textContent'), /Hello from history|Saved conversation/);
     await browser.click('.chat-item-open'); await assertView('chat');
     assert.match(await browser.evaluate('document.getElementById("messages").textContent'), /Hello from history/);
     assert.equal(await avatar('.message.user .msg-avatar'), 'cat');
     await browser.click('#space-home'); await assertView('dashboard');
     await browser.click('#new-chat'); await assertView('chat');
     assert.equal(await browser.evaluate('document.getElementById("messages").children.length'), 0);
+    await browser.wait('!document.getElementById("chat-form").hidden').catch(async () => {
+        throw new Error('Chat access fixture: ' + await browser.evaluate('document.getElementById("chat-access-message").textContent'));
+    });
     await checkChatThemes('empty');
+    await browser.click('[data-prompt]');
+    assert.match(await browser.evaluate('document.querySelector("#message-input").value'), /exam/i);
+    assert.equal(chatRequests.length,0);
+    await browser.evaluate('document.querySelector("#message-input").value=""');
     await clickVisible('#message-input');
     await browser.command('Input.insertText', { text: 'Help me plan my study break.' });
     await press('Enter');
+    await browser.wait('document.querySelector("#gemini-disclosure").open');
+    assert.equal(chatRequests.length,0);
+    await browser.click('#gemini-disclosure [value="cancel"]');
+    await browser.wait('!document.querySelector("#gemini-disclosure").open');
+    assert.equal(await browser.evaluate('document.querySelector("#message-input").value'), 'Help me plan my study break.');
+    await browser.click('#send-button');
+    await browser.click('#confirm-send-gemini');
     await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
     await checkChatThemes('populated');
     const first = chatRequests.at(-1);
@@ -222,9 +244,13 @@ async function checkChatThemes(state) {
     await clickVisible('#settings-dialog [data-close-dialog]');
     await browser.click('#sidebar-toggle');
     assert.equal(await browser.evaluate('document.getElementById("sidebar-toggle").getAttribute("aria-expanded")'), 'true');
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
+    assert.doesNotMatch(await browser.evaluate(`localStorage.getItem('mannsathi.chats.${users.A}')`), /study break/);
+    await browser.click('#open-earlier-chats');
     await browser.click('.chat-item-open');
     chatOutcome = 'delayed';
     await browser.click('.msg-action-regen');
+    await browser.click('#confirm-send-gemini');
     for (let i=0; !releaseChat && i<100; i++) await browser.delay(20);
     assert.equal(typeof releaseChat,'function');
     await browser.evaluate('window.__testSetUser("B")');
@@ -235,7 +261,9 @@ async function checkChatThemes(state) {
     assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
     releaseChat();
     chatOutcome = 'success';
+    await browser.wait('!document.querySelector("#chat-form").hidden');
     await browser.evaluate('send("Student B only")');
+    await browser.click('#confirm-send-gemini');
     await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
     assert.equal(chatRequests.at(-1).authorization, 'Bearer test-B');
     assert.deepEqual(chatRequests.at(-1).body.messages, [{role:'user',text:'Student B only'}]);
@@ -243,19 +271,52 @@ async function checkChatThemes(state) {
     assert.doesNotMatch(await browser.evaluate('document.querySelector("#messages").textContent'), /Late reply|Hello from history|study break/);
     await browser.evaluate('window.__testSetUser("A")');
     await browser.wait('document.querySelector("#user-avatar").dataset.avatar === "cat"');
-    assert.match(await browser.evaluate('document.querySelector("#chat-history").textContent'), /Hello from history/);
+    assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
     assert.doesNotMatch(await browser.evaluate('document.querySelector("#chat-history").textContent'), /Student B only|Unattributed private history/);
+    await browser.wait('!document.querySelector("#chat-form").hidden');
+    chatOutcome = 'delayed'; releaseChat = null;
+    await browser.evaluate('send("Private pending request")'); await browser.click('#confirm-send-gemini');
+    for (let i=0; !releaseChat && i<100; i++) await browser.delay(20);
+    assert.equal(typeof releaseChat,'function');
+    await browser.click('#clear-chat');
+    await browser.click('#confirm-clear-history');
+    assert.equal(await browser.evaluate('document.querySelector("#messages").childElementCount'), 0);
+    releaseChat(); chatOutcome = 'success';
+    assert.equal(await browser.evaluate(`localStorage.getItem('mannsathi.chats.${users.A}')`),null);
+    assert.match(await browser.evaluate('localStorage.getItem("mannsathi_chats")'), /Unattributed private history/);
+    await browser.click('#settings-clear-history'); await browser.click('#erase-legacy-chats');
+    await browser.evaluate('window.savedRemove = Storage.prototype.removeItem; Storage.prototype.removeItem = () => {throw Error("storage blocked");}');
+    await browser.click('#confirm-clear-history');
+    assert.match(await browser.evaluate('document.getElementById("clear-chat-error").textContent'), /could not be erased/);
+    await browser.evaluate('Storage.prototype.removeItem = window.savedRemove');
+    await browser.click('#confirm-clear-history');
+    assert.equal(await browser.evaluate('localStorage.getItem("mannsathi_chats")'),null);
+    assert.equal(await browser.evaluate('document.querySelector("#messages").childElementCount'),0);
+    await browser.evaluate('window.savedSignOut = window.supabaseClient.auth.signOut; window.supabaseClient.auth.signOut = async () => {throw Error("offline");}');
+    await browser.evaluate('send("Pending during sign out")'); await browser.click('#confirm-send-gemini');
+    await browser.click('#sidebar-signout');
+    await browser.wait('!document.querySelector("#retry-chat-signout").hidden');
+    assert.equal(await browser.evaluate('document.querySelector("#messages").childElementCount'),0);
+    assert.match(await browser.evaluate('document.querySelector("#chat-signout-status").textContent'), /may still be signed in/);
+    assert.equal(await browser.evaluate('location.pathname'),'/app.html');
+    await browser.evaluate('window.supabaseClient.auth.signOut = window.savedSignOut'); await browser.click('#cancel-chat-signout');
+    availability = null; await browser.evaluate('checkAccess()');
+    assert.equal(await browser.evaluate('document.querySelector("#chat-form").hidden'),true);
+    assert.match(await browser.evaluate('document.querySelector("#chat-access-message").textContent'), /could not be confirmed/);
+    availability = false; await browser.click('#retry-chat-access');
+    await browser.wait('document.querySelector("#chat-access-message").textContent.includes("adult pilot")');
     await browser.evaluate('window.__testSetUser(null)');
     await browser.wait('document.querySelector("#user-avatar").dataset.avatar === "frog"');
     assert.equal(await browser.evaluate('document.querySelector("#messages").childElementCount'), 0);
     assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
-    assert.match(await browser.evaluate('localStorage.getItem("mannsathi_chats")'), /Unattributed private history/);
+    assert.equal(await browser.evaluate('localStorage.getItem("mannsathi_chats")'), null);
     console.log('PASS default dashboard, accessible skip link, history/New chat routing, collapsed rail persistence and account/guest avatar identity');
     await browser.command('Page.navigate', { url: base + '/app.html?guest=true' }); await ready();
     assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
+    const beforeGuest = chatRequests.length;
     await browser.evaluate('send("Guest page only")');
-    await browser.wait('document.querySelector(".message.assistant .msg-body")?.textContent.includes("Local fixture reply.")');
-    assert.equal(chatRequests.at(-1).authorization, undefined);
+    assert.equal(chatRequests.length,beforeGuest);
+    assert.equal(await browser.evaluate('document.querySelector("#chat-access-signin").hidden'), false);
     await browser.command('Page.reload'); await ready();
     assert.equal(await browser.evaluate('document.querySelectorAll(".chat-item-open").length'), 0);
     for (const [width, height] of [[390, 844], [320, 740]]) {
@@ -307,6 +368,14 @@ async function checkChatThemes(state) {
         await press('Escape');
         if (width <= 760) await press('Escape');
     }
+    await browser.command('Page.navigate',{url:base+'/app.html'}); await ready();
+    await browser.evaluate('window.__testSetUser("A"); window.savedSignOut = window.supabaseClient.auth.signOut; window.supabaseClient.auth.signOut = async () => ({error:Error("offline")});');
+    await browser.click('#sidebar-signout');
+    await browser.wait('!document.querySelector("#retry-chat-signout").hidden');
+    await browser.evaluate('window.supabaseClient.auth.signOut = window.savedSignOut');
+    await browser.click('#retry-chat-signout');
+    await browser.wait('location.pathname === "/index.html"');
+    assert.equal(await browser.evaluate('localStorage.getItem("sidebar-test-user")'), 'none');
     assert.equal(browser.errors.length, 0, 'Unhandled browser exceptions: ' + JSON.stringify(browser.errors));
     console.log('PASS mobile focus, profile menu and settings routes, short-height layouts, and dark/light chat controls');
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); server.close(); });

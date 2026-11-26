@@ -45,7 +45,7 @@ The inbox shows the latest 100 notices while the unread count covers all authori
 1. Review/apply migration 002; run the administrator onboarding scripts only for the intended accounts.
 2. Deploy the updated HTML/CSS/JavaScript and Python `/api/tasks` alongside the existing `/api/calendar`, `/api/chat` and `/api/config`. Keep the existing Vercel configuration and Python dependencies.
 3. Keep `SUPABASE_URL` and a publishable/anon `SUPABASE_KEY` configured. No service-role key is added to frontend code or the Python task transport.
-4. Add `/teacher-login.html` to Supabase Auth's allowed password-reset redirect URLs alongside the student login URL.
+4. Add the exact student and teacher recovery URLs on the deployed origin to Supabase Auth's redirect allowlist. [Password recovery setup](help-and-support.md#release-checks)
 5. Local development remains `python local_test.py`. No frontend framework, build system or paid service was added.
 
 Deploy the role-checked login and task backend together with the migration: missing role RPCs fail closed, so ordinary sign-in cannot redirect until account access can be verified. Existing guest chat remains usable.

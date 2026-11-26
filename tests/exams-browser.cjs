@@ -35,7 +35,7 @@ const server=http.createServer(async(req,res)=>{
   }
   const file=path.resolve(root,'.'+(url.pathname==='/'?'/app.html':decodeURIComponent(url.pathname)));
   if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
-  try{let data=fs.readFileSync(file);if(path.extname(file)==='.html')data=Buffer.from(data.toString('utf8').replace('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','/test-supabase.js'));res.writeHead(200,{'Content-Type':{'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml'}[path.extname(file)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404);res.end();}
+  try{let data=fs.readFileSync(file);if(path.extname(file)==='.html')data=Buffer.from(data.toString('utf8').replace('js/vendor/supabase-2.119.2/supabase.js','/test-supabase.js'));res.writeHead(200,{'Content-Type':{'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml'}[path.extname(file)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404);res.end();}
 });
 (async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));base='http://127.0.0.1:'+server.address().port;

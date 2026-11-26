@@ -5,7 +5,7 @@ select objects.name, to_regclass('public.' || objects.name) is not null as prese
 from (values ('profiles'),('batch_permissions'),('teacher_permissions'),('calendar_events'),
   ('tasks'),('study_subjects'),('calendar_exams'),('ai_admins'),('ai_global_policy'),('ai_student_policies'),
   ('ai_usage'),('ai_daily_counters'),('ai_model_pricing'),('ai_audit'),('ai_student_directory'),
-  ('ai_quota_snapshots'),('ai_billing_snapshots')) as objects(name);
+  ('ai_quota_snapshots'),('ai_billing_snapshots'),('ai_adult_pilot'),('ai_archived_months')) as objects(name);
 
 select table_schema,table_name,column_name,data_type from information_schema.columns
 where (table_schema='auth' and table_name='users' and column_name in ('id','email','raw_user_meta_data','is_anonymous'))
@@ -19,7 +19,9 @@ from pg_class c join pg_namespace n on n.oid=c.relnamespace
 where n.nspname='public' and c.relname like 'ai\_%' escape '\' and c.relkind in ('r','v')
 order by c.relname;
 
-select p.oid::regprocedure as rpc,has_function_privilege('anon',p.oid,'EXECUTE') as anonymous_execute,
+select p.oid::regprocedure as rpc,
+  case p.provolatile when 'v' then 'read/write' else 'read-only' end as post_rpc_transaction,
+  has_function_privilege('anon',p.oid,'EXECUTE') as anonymous_execute,
   has_function_privilege('authenticated',p.oid,'EXECUTE') as signed_in_execute
 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
 where n.nspname='public' and p.proname like 'mannsathi\_ai\_%' escape '\'

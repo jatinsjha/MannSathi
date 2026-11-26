@@ -115,9 +115,9 @@ export function overview(data) {
 }
 export function students(data, actions) {
     const measured = (value, unknown, fmt) => fmt(value) + (value != null && unknown ? " (partial)" : "");
-    return box("Student usage", table(["Student","Email","Class","Division","Requests","Input","Output","Total tokens","Estimated cost","Limit used¹","Last active (UTC)","AI access"],data.rows.map(r => [
+    return box("Student usage", table(["Student","Email","Class","Division","Requests","Input","Output","Total tokens","Estimated cost","Limit used¹","Last active (UTC)","Pilot approval","Usage policy"],data.rows.map(r => [
         button(r.name || r.email || r.user_id, () => actions.student(r.user_id), "admin-link"),r.email,r.class_code,r.division,
-        number(r.requests),measured(r.input_tokens,r.unknown_input,number),measured(r.output_tokens,r.unknown_output,number),measured(r.total_tokens,r.unknown_total,number),measured(r.estimated_cost,r.unknown_cost,money),pct(r.usage_pct),instant(r.last_active),r.access_status
+        number(r.requests),measured(r.input_tokens,r.unknown_input,number),measured(r.output_tokens,r.unknown_output,number),measured(r.total_tokens,r.unknown_total,number),measured(r.estimated_cost,r.unknown_cost,money),pct(r.usage_pct),instant(r.last_active),pilotApproval(r.pilot_approved),r.access_status
     ]),"Student usage"),note("¹ Highest utilization of this student’s current daily or monthly limits, including reserved capacity."),pager(data,actions.page));
 }
 function logTable(data, onPage) {
@@ -130,8 +130,8 @@ export function logs(data, actions) {
         data.rows.some(r => r.status === "pending") ? note("Pending requests keep their reservation until settled. An older entry can indicate an interrupted request.") : document.createDocumentFragment());
 }
 const field = (id, label, type = "number", extra = {}) => ({id,label,type,...extra});
-const globalFields = [field("enabled","Enable AI","checkbox"),field("requests_per_minute","Requests per minute"),
-    field("daily_token_limit","Daily tokens"),field("monthly_token_limit","Monthly tokens"),field("guest_request_limit","Guest requests per day"),field("guest_token_limit","Guest tokens per day"),
+const globalFields = [field("enabled","Enable AI","checkbox"),field("requests_per_minute","Requests per minute","number",{required:true}),
+    field("daily_token_limit","Daily tokens","number",{required:true}),field("monthly_token_limit","Monthly tokens","number",{required:true}),
     field("warning_thresholds","Warning thresholds (%)","text",{required:true})];
 const studentFields = [field("enabled","Enable student AI","checkbox"),field("daily_token_limit","Daily tokens"),field("monthly_token_limit","Monthly tokens"),
     field("request_limit","Requests per day"),field("restricted","Restrict student AI","checkbox"),field("restriction_reason","Restriction reason","text"),field("restricted_until","Restriction expires (local time)","datetime-local")];
@@ -188,13 +188,13 @@ function editForm(title, desc, action, fields, values, actions) {
 export function student(data, actions) {
     const r = data.student, s = data.summary;
     return group("", button("Back to students",actions.back), box(r.name || r.email || r.user_id,
-        note([r.email,r.class_code,r.division].filter(Boolean).join(" · ")),facts([["User ID",r.user_id],["AI access",r.access_status],["Current limit used",pct(r.usage_pct)],["Warning threshold reached",pct(r.warning_pct)],["Requests",number(s.requests)],["Reported tokens",number(s.total_tokens)],["Average per measured request",number(s.average_tokens)],["Estimated cost",money(s.estimated_cost)]])),
+        note([r.email,r.class_code,r.division].filter(Boolean).join(" · ")),facts([["User ID",r.user_id],["Pilot approval",pilotApproval(r.pilot_approved)],["Usage policy",r.access_status],["Current limit used",pct(r.usage_pct)],["Warning threshold reached",pct(r.warning_pct)],["Requests",number(s.requests)],["Reported tokens",number(s.total_tokens)],["Average per measured request",number(s.average_tokens)],["Estimated cost",money(s.estimated_cost)]])),
         coverage(s),group("admin-grid",timeline("Daily tokens",data.daily,"total_tokens"),timeline("Monthly tokens in selection",data.monthly,"total_tokens",number,"month"),breakdown(s),ranking("Tokens by model",data.models,"model","total_tokens")),
-        editForm("Student AI controls","Blank limits allow unlimited usage. A restriction can have an optional expiry.","student_policy",studentFields,{enabled:true,...data.policy},actions),
+        editForm("Student AI controls","Blank limits remove the individual cap. Global limits still apply. A restriction can have an optional expiry.","student_policy",studentFields,{enabled:true,...data.policy},actions),
         box("Request history",logTable(data.logs,actions.page)));
 }
 export function limits(data,actions) {
-    return group("",editForm("Global AI controls","Limits apply across MannSathi. Guest limits share one daily allowance. All periods use UTC. Blank limits allow unlimited usage.","global",globalFields,data.global,actions),
+    return group("",editForm("Global AI controls","Set finite limits for approved adult pilot accounts. Guest chat is closed. All periods use UTC.","global",globalFields,data.global,actions),
         box("Individual students",button("Find a student",actions.back)));
 }
 export function billing(data,actions) {
@@ -221,7 +221,7 @@ export function provider(data) {
     const absent = ["RPM","TPM","RPD"].filter(metric => !metrics.some(r => r.metric === metric && r.model === data.configured_model));
     const measured = rows.length ? table(["Model","Metric","Google limit name","Reported limit","Consumption","Remaining","Used","Remaining %","Window start","Observed through","Reset","Synced"],rows,"Gemini provider quota") : document.createDocumentFragment();
     const absentMetrics = absent.length ? table(["Configured model","Metric","Limit and consumption"],absent.map(metric => [data.configured_model,metric,missing]),"Unavailable Google quota metrics") : document.createDocumentFragment();
-    return group("",facts([["Gemini connection evidence",observed],["Configured model",data.configured_model],["Upstream 429s · last 24 hours",number(data.rate_limits)]],true),
+    return group("",facts([["Gemini connection evidence",observed],["Configured model",data.configured_model],["Paid project review",paidReview(data.paid_pilot_ready)],["Upstream 429s · last 24 hours",number(data.rate_limits)]],true),
         box("Provider quota",note("Google Cloud observations can arrive late. Capacity and percentages refer to the displayed observation window."),
             facts([["Google project",data.project ?? missing],["Last quota sync",data.last_sync ? instant(data.last_sync) : missing]]),
             measured, absentMetrics,
@@ -242,7 +242,9 @@ export function settings(data,actions) {
         for (const f of prices) pricesForm.querySelector('input[name="'+f.id+'"]').value = row[f.id];
         pricesForm.querySelector("input").focus();
     },"admin-link");
-    return group("",box("AI configuration",facts([["Chat",g.enabled ? "Enabled" : "Disabled"],["Gemini model",data.configured_model],["Server API key",data.key_configured ? "Configured" : "Missing"],["Provider monitoring",data.provider_monitoring],["Monthly budget",money(g.monthly_budget)],["Requests per minute",g.requests_per_minute ?? "Unlimited"],["Daily token limit",g.daily_token_limit ?? "Unlimited"],["Monthly token limit",g.monthly_token_limit ?? "Unlimited"]])),
+    return group("",box("AI configuration",facts([["Chat",g.enabled ? "Enabled" : "Disabled"],["Gemini model",data.configured_model],["Server API key",data.key_configured ? "Configured" : "Missing"],["Paid project review",paidReview(data.paid_pilot_ready)],["Provider monitoring",data.provider_monitoring],["Monthly budget",money(g.monthly_budget)],["Requests per minute",g.requests_per_minute ?? "Unavailable"],["Daily token limit",g.daily_token_limit ?? "Unavailable"],["Monthly token limit",g.monthly_token_limit ?? "Unavailable"]])),
         box("Model pricing",table(["Model","Input USD per million","Output USD per million"],data.pricing.map(r => [linkPrice(r),money(r.input_per_million),money(r.output_per_million)]),"Model pricing")),pricesForm,
         box("Admin activity and restrictions",button("View blocked requests",actions.blocked),table(["Time (UTC)","Action","Actor ID","Target user ID","Reason","Values"],audit.rows.map(r => [instant(r.created_at),r.action,r.admin_id ?? "Automatic",r.target_user_id,r.reason,changeDetails(r)]),"Admin audit trail"),pager(audit,actions.page)));
 }
+const pilotApproval = value => value == null ? "Unavailable" : value ? "Approved" : "Not approved";
+const paidReview = value => value == null ? "Unavailable" : value ? "Current" : "Required";

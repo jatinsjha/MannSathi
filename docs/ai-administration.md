@@ -1,6 +1,6 @@
 # AI administration
 
-Sign in with a provisioned account and open **AI administration** in the MannSathi sidebar. The overview starts with the last seven UTC dates. The student directory sorts by reported tokens and includes accounts with no recorded use. Choose a student's name to inspect their history or restrict their AI access. The **At warning threshold** filter uses current policy counters. **Request logs** exports the applied filters as CSV.
+Sign in with a provisioned account, open **AI administration** and verify your authenticator. The overview starts with the last seven UTC dates. The student directory sorts by reported tokens and includes accounts with no recorded use. Choose a student's name to inspect their history or restrict their AI access. The **At warning threshold** filter uses current policy counters. **Request logs** exports the applied filters as CSV. Follow the release runbook to enable the adult pilot, verify billing and schedule retention. [Launch operations](launch-operations.md)
 
 ## Repository and database audit
 
@@ -10,31 +10,33 @@ The existing stack includes static HTML, the shared workspace shell and theme, v
 
 ## How a request is accounted for
 
-1. The chat client sends the current Supabase bearer token and a UUID. The backend verifies the token at Supabase Auth. Anonymous visitors use a separate, platform-wide guest pool. Invalid bearer credentials fail authentication.
+1. The chat client sends the current Supabase bearer token and a UUID. Supabase Auth verifies the account. Migration 010 restricts chat to operator-approved adult pilot accounts while its deployment has a current, project-bound Paid Services review. Guests cannot submit AI requests.
 2. A service-only PostgreSQL function serializes admission against the global policy row, checks current restrictions, assigns the request ID and reserves an initial token before calling Google's token counter. Counters use UTC admission dates. A second transaction reserves the measured prompt plus the maximum reply of 1,024 tokens, rechecking applicable controls. The database lock ends before generation begins.
 3. The existing Google SDK generates a reply. The backend records prompt, candidate, thinking and total counts when the response supplies them, along with model, outcome, timing and a safe error category. It finalizes the same request ID once. An intentional retry can link to a prior request. Conversation text, replies, authorization headers and API keys have no columns in the ledger.
 4. Unknown usage remains null. A confirmed failure before generation releases the token reservation and preserves the attempt in request history. An uncertain outcome after generation can retain the reservation because the provider may have processed it. The current day's or month's allowance may therefore be smaller than reported token totals suggest. A request can be rejected if a full 1,024-token reply would exceed the remaining allowance. Pending records are visible under **Request logs → Pending**. Avoid manually releasing them without independent evidence of what Google processed.
 
-The usage overview covers the platform, including guests and identified non-students. Student rankings use current non-anonymous accounts outside the teacher and administrator registries. Class and division come from approved enrollment. Active AI users count distinct identified accounts with at least one non-blocked request. Total attempts also include blocked and pending rows. Average tokens uses the requests with measured totals. A Gemini total can include thinking tokens in addition to prompt and visible output.
+The usage overview includes any guest records retained from earlier releases and identified non-students. Student rankings use current non-anonymous accounts outside the teacher and administrator registries. Class and division come from approved enrollment. Active AI users count distinct identified accounts with at least one non-blocked request. Total attempts also include blocked and pending ledger rows. Average tokens uses the requests with measured totals. A Gemini total can include thinking tokens in addition to prompt and visible output.
 
-New signed-in chat histories use an account-specific key in this browser. Switching accounts clears the visible conversation, draft and retry state. Guest history lasts for the current page session. Earlier releases stored transcripts in a shared browser key without an owner ID. That old data stays on the device and is excluded from account histories because the app cannot establish ownership.
+New transcripts stay in page memory. Switching accounts clears the visible conversation, draft and retry state. The workspace includes controls for reviewing or clearing history left on a device by older releases. Server-side AI usage reports contain request metadata.
 
 ## Authorization and storage
 
-Every admin API request verifies the bearer token with Supabase, derives the actor UUID, checks membership in `ai_admins` and consumes a slot in a database-backed rolling admin rate limit. Report and change functions check membership again. Teacher rights, editable Auth metadata, email addresses, URL parameters and sidebar visibility do not grant that membership.
+Every admin API request verifies the bearer token with Supabase, derives the actor UUID, checks membership in `ai_admins` and consumes a slot in a database-backed rolling admin rate limit. Privileged reads, CSV exports and mutations require the verified session's `aal2` assurance level for that same actor. Report and change functions recheck membership.
 
 | Migration | Purpose |
 | --- | --- |
 | 006 | Admin membership, global and student policies, model prices, request ledger, transactionally updated counters, admin actions and service-only admission/finalization functions |
 | 007 | Student directory over existing profile/enrollment data, filtered SQL aggregates, paged history and audit reports |
 | 008 | Project-scoped Google quota observations and current-month USD Cloud Billing snapshots, with privileged import functions and an admin-checked reader |
+| 009 | Allows the reporting RPC to take the lock that protects its admin membership check |
+| 010 | Enforces adult pilot approval and finite limits, closes guest access, and installs bounded retention with anonymous accounting aggregates |
 
 Private tables have RLS and restricted grants. The directory and internal reporting helpers also have explicit grant restrictions. Requests from the browser go through `/api/admin`. No administrative table is queried from browser code. Report filters have bounded dates and page sizes. CSV exports are restricted to 10,000 matching rows and are generated from whitelisted usage fields.
 
 ## Supabase and Vercel deployment
 
 1. Use the intended Supabase staging project first. Run the read-only [schema inventory](../database/inspect_ai_schema.sql) in its SQL editor. Review the existing migrations and the project’s migration history. Resolve missing prerequisites or preexisting AI objects before continuing. Supabase projects with earlier MannSathi releases can be at different migration levels.
-2. Apply each **missing** numbered migration, in order, using a trusted SQL editor administrator. For an installation current through 005, run [006](../database/migrations/006_ai_control.sql), [007](../database/migrations/007_ai_reporting.sql), then [008](../database/migrations/008_ai_provider.sql). Each file runs inside a transaction. If one fails, inspect the error and the inventory before retrying. Do not rerun a successful migration.
+2. Apply each **missing** numbered migration in order using a trusted SQL editor administrator. An installation current through 005 needs 006 through 010 for AI. Migration 011 installs the separate support inbox. Each file runs inside a transaction. Inspect any failed migration and rerun the inventory before retrying. [AI launch operations](launch-operations.md) · [Help and support](help-and-support.md)
 3. In **Authentication → Users**, verify the intended owner's UUID. Provision the membership with the SQL below. The owner can use the existing sign-in flow appropriate for their account. Remove the membership to revoke access on the next request.
 
    ```sql
@@ -52,12 +54,17 @@ Private tables have RLS and restricted grants. The directory and internal report
    | `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase secret key or legacy service-role JWT for this project |
    | `GEMINI_API_KEY` | Server-only Gemini Developer API credential |
    | `GEMINI_MODEL` | Model ID available to this key. The code preserves the repository’s default, `gemini-3.5-flash-lite`. Confirm access for the deployed project. |
-   | `GEMINI_CLOUD_PROJECT` | Optional Google project **ID** owning the Gemini key. The reader only returns imported snapshots for this ID. |
+   | `GEMINI_CLOUD_PROJECT` | Google project ID owning the deployed key. Used for pilot activation and imported snapshots. |
+   | `GEMINI_PAID_PROJECT_ATTESTATION`, `GEMINI_PAID_REVIEW_UNTIL` | Paid-tier confirmation for that project and key, with UTC review expiry. See the launch runbook. |
 
 5. Keep the Vercel root at the repository root, with the project's Python 3.12 runtime, existing Python dependencies and static files. Deploy the backend and frontend together following the database upgrade. The new function route is `/api/admin`. Set the function duration high enough for authentication, token counting, generation and settlement within your Vercel plan. Redeploy after changing Vercel environment variables.
-6. In staging, check that the owner sees administration and a student and an unprovisioned teacher receive 403 from `GET /api/admin?action=overview` with their valid tokens. Sign in as a test student, send a short chat, then verify a single record and its token coverage. Restrict that student, confirm the next paid generation is blocked, open Calendar and Tasks, then lift the restriction and review the audit entry. Repeat the schema inventory and check that both browser roles lack administrative privileges. Promote the tested deployment after configuring the production project manually.
+6. In staging, check that the owner completes MFA and a student and an unprovisioned teacher receive 403 from `GET /api/admin?action=overview` with valid tokens. Sign in as an approved adult pilot participant, send a short synthetic chat, then verify a single record and its token coverage. Restrict that participant, confirm the next generation is blocked, open Calendar and Tasks, then lift the restriction and review the audit entry. Repeat the schema inventory and check that both browser roles lack administrative privileges. Promote the tested deployment after configuring the production project manually.
 
-**Initial policy.** Signed-in AI is enabled. Global and student token limits and model prices start unconfigured. Both daily guest allowances start at zero. Enabling guest AI gives anyone who signs out access to the shared guest pool, including people with a restricted account. Keep the guest pool closed when restrictions must require a signed-in identity. AI controls apply only to chat. Blocked attempts remain in request history with a restriction category.
+**Initial policy.** Migration 010 starts with an empty pilot allowlist and enforces zero guest allowances. Missing global limits receive finite defaults. Model pricing requires an operator's input. Approval checks run before Gemini token counting and before generation. Existing students keep access to Calendar and Tasks. [Launch defaults and provisioning](launch-operations.md)
+
+### AI administration opens but the overview reports unavailable storage
+
+On installations through 008, the report function is marked `STABLE`. Supabase’s PostgREST therefore calls it in a read-only transaction. Its admin membership check uses `SELECT FOR SHARE`, which PostgreSQL rejects in that transaction with SQLSTATE `25006`. If 006–008 are already installed, run only [009](../database/migrations/009_ai_report_transaction.sql) in the Supabase SQL Editor for the app’s project. It updates the function declaration and reloads the schema cache. Refresh **AI administration** after the query succeeds. This database fix takes effect on the existing Vercel deployment. [PostgREST transaction access modes](https://docs.postgrest.org/en/stable/references/transactions.html#access-mode-on-functions)
 
 ## Monitor Gemini quota
 
@@ -93,7 +100,7 @@ The MannSathi monthly budget tracks spending locally. For a provider-enforced ca
 - Python API tests use verified-auth and provider fixtures. The Google SDK wire-format test can run with the project dependency installed. Run `python -m unittest discover -s tests`.
 - The PostgreSQL migrations and grants run in the existing PGlite harness. Run `node tests/ai-control-sql.cjs` and `node tests/ai-reporting-sql.cjs`. Follow the harness instructions for `PGLITE_MODULE_PATH`. The separate `node tests/ai-postgres-race.cjs` test uses a disposable native PostgreSQL cluster and two independent connections. See the script for `PG_BIN_DIR` and `PG_MODULE_PATH`.
 - Run `node tests/ai-admin-browser.cjs` and the existing browser suites with a local Chrome installation. Set `CHROME_PATH` if Chrome is installed outside the driver's default path. Browser fixtures exercise the workspace entry point, report filters, saves, export, mobile layout and account switches without production records.
-- There is no historical backfill, invoice reconciliation or automated deletion of request records. Restrict access to usage exports and set an operational retention period appropriate for your deployment. Repeated blocked requests still create log entries. Database monitoring and hosting edge rate limits can help manage heavy request volume.
+- Usage begins at instrumentation. Restrict access to CSV exports and set their deletion date when sharing them. Migration 010 supplies an operator-scheduled pruning routine for identifiable records and expired snapshots. [Retention and accounting](launch-operations.md#retention-and-accounting)
 - Live migration state, Google metric availability, project tier, actual billing export, IAM grants and deployed Vercel behavior require the staging and project-specific checks above.
 
 ### Local results for this release
@@ -108,4 +115,4 @@ The MannSathi monthly budget tracks spending locally. For a provider-enforced ca
 | 6. Limits | Native PostgreSQL testing with two independent sessions confirmed lock waiting, denial at capacity, and enforcement of a newly committed student restriction. |
 | 7. Provider | Fixture tests passed for missing series, mismatched dimensions, time windows, incomplete or invalid measurements and genuine zero values. No project credentials were used. |
 | 8. Billing | Tests passed for model-specific estimates, incomplete coverage, month rollover, matching-project USD snapshots, dated export corrections and separate budget bases. |
-| 9. Audit and integration | The Python regression run passed all 69 tests with the SDK installed. The seven existing browser suites passed. Sidebar, Calendar and Dashboard passed again after chat-history isolation. The admin browser suite exercised all seven sections, mobile layout, account switches and policy writes. The final quota display, chart spacing and student subtotal passed inert DOM checks. Server-relative and custom dates passed API tests. A repeat Chrome run after those UI refinements could not launch because automatic approval review failed. |
+| 9. Audit and integration | The Python regression run passed all 70 tests with the SDK installed. The database suite reproduced the reporting failure for an existing admin on 008, then passed after migration 009. The seven existing browser suites passed. Sidebar, Calendar and Dashboard passed again after chat-history isolation. The admin browser suite exercised all seven sections, mobile layout, account switches and policy writes. The final quota display, chart spacing and student subtotal passed inert DOM checks. Server-relative and custom dates passed API tests. A repeat Chrome run after those UI refinements could not launch because automatic approval review failed. |

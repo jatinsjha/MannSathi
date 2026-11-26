@@ -11,8 +11,14 @@ const alice = '00000000-0000-4000-8000-000000000001';
 const bob = '00000000-0000-4000-8000-000000000002';
 
 async function report(action, filters, actor=owner) {
-  return (await db.query('select public.mannsathi_ai_report($1::uuid,$2,$3::jsonb) as v',
-    [actor, action, JSON.stringify(filters)])).rows[0].v;
+  // PostgREST runs POST RPCs in a read-only transaction for STABLE/IMMUTABLE functions.
+  const {rows: [fn]} = await db.query(
+    "select provolatile from pg_proc where oid='public.mannsathi_ai_report(uuid,text,jsonb)'::regprocedure");
+  return db.transaction(async tx => {
+    await tx.exec(fn.provolatile === 'v' ? 'set transaction read write' : 'set transaction read only');
+    return (await tx.query('select public.mannsathi_ai_report($1::uuid,$2,$3::jsonb) as v',
+      [actor, action, JSON.stringify(filters)])).rows[0].v;
+  });
 }
 async function main() {
   await db.exec(`create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
@@ -31,6 +37,11 @@ async function main() {
     await db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)', [id,name+'@example.test',JSON.stringify({full_name:name})]);
   }
   await db.query('insert into public.ai_admins(user_id) values($1)',[owner]);
+  // Upgrade a provisioned owner on 008 just as an existing Supabase project would.
+  await db.exec('set role service_role');
+  await assert.rejects(report('overview',{start:'2026-01-01',end:'2026-01-01'}),e=>e.code==='25006');
+  await db.exec('reset role');
+  await db.exec(fs.readFileSync(path.join(dir,'009_ai_report_transaction.sql'),'utf8'));
   await db.query("insert into public.teacher_permissions(user_id,batch_code) values($1,'25cs')",[teacher]);
   await db.query("insert into public.batch_permissions(user_id,batch_code,status,division) values($1,'25cs','approved','A')",[alice]);
   await db.query("insert into public.ai_student_policies(user_id,daily_token_limit) values($1,100)",[alice]);
@@ -136,6 +147,81 @@ async function main() {
   assert.equal(exhausted.rows[0].access_status,'limit reached');
   assert.equal(exhausted.rows[0].usage_pct,null);
   console.log('PASS PostgreSQL admin reports, authorization, guest/unknown totals, costs, filters, pagination, restrictions, thresholds, CSV, audit and scoped Google snapshots.');
+  await db.exec('reset role');
+  await checkLaunch(dir);
+}
+async function checkLaunch(dir) {
+  const value = async (sql,args=[]) => (await db.query(sql,args)).rows[0].v;
+  const reserve = user => value("select mannsathi_ai_pilot_reserve(gen_random_uuid(),$1,null,'gemini-test','chat',1) v",[user]);
+  const review = allow => value('select mannsathi_ai_review_pilot($1,$2,$3) v',[owner,alice,allow]);
+  await db.exec("update ai_global_policy set daily_token_limit=7000,guest_request_limit=4");
+  await db.exec(fs.readFileSync(path.join(dir,'010_ai_launch_controls.sql'),'utf8'));
+  assert.equal(await value("select (requests_per_minute=20 and daily_token_limit=7000 and monthly_token_limit=2000000 and guest_request_limit=0) v from ai_global_policy"),true);
+  await assert.rejects(db.exec("update ai_global_policy set requests_per_minute=null"), e=>e.code==='23502');
+  await assert.rejects(db.exec("update ai_global_policy set guest_token_limit=1"), e=>e.code==='23514');
+  for (const role of ['anon','authenticated','service_role']) {
+    await db.exec('set role '+role);
+    for (const attempt of [()=>review(true),()=>db.query('select mannsathi_ai_prune()'),()=>db.query('select * from ai_adult_pilot'),
+      ()=>db.query("select mannsathi_ai_reserve(gen_random_uuid(),null,null,'a','chat',1)"),
+      ()=>db.query("select mannsathi_ai_resize(gen_random_uuid(),1)"),()=>db.query('select mannsathi_ai_admin_gate($1)',[owner])]) {
+      await assert.rejects(attempt,e=>e.code==='42501');
+    }
+    if (role!=='service_role') await assert.rejects(()=>reserve(alice),e=>e.code==='42501');
+    await db.exec('reset role');
+  }
+  await db.exec("set role service_role");
+  assert.equal(await value("select mannsathi_ai_admin_session($1) v",[owner]),true);
+  await assert.rejects(()=>value("select mannsathi_ai_admin_session($1) v",[teacher]),e=>e.code==='PT403');
+  for(const account of [null,alice,teacher,owner]) assert.equal((await reserve(account)).code,'ai_unavailable');
+  await db.exec("reset role");
+  await review(true);
+  const approvedRow=await report('students',{start:'2026-01-01',end:'2026-01-01',q:'Alice'});
+  assert.equal(approvedRow.rows[0].pilot_approved,true);
+  assert.equal(await value("select expires_at>now() and expires_at<=reviewed_at+interval '90 days' v from ai_adult_pilot where user_id=$1",[alice]),true);
+  assert.equal(await value("select request_limit=30 and daily_token_limit=100 and monthly_token_limit=200000 v from ai_student_policies where user_id=$1",[alice]),true);
+  await db.exec("set role service_role");
+  assert.equal(await value("select mannsathi_ai_pilot_eligible($1) v",[alice]),true);
+  const rid=await value('select gen_random_uuid() v');
+  assert.equal((await value("select mannsathi_ai_pilot_reserve($1,$2,null,'gemini-test','chat',1) v",[rid,alice])).allowed,true);
+  await db.exec("reset role");
+  await review(false);
+  await db.exec("set role service_role");
+  assert.equal((await value("select mannsathi_ai_pilot_resize($1,5) v",[rid])).code,'ai_unavailable');
+  await db.exec("reset role");
+  assert.equal(await value("select status='blocked' and reserved_tokens=0 and generation_attempted=false v from ai_usage where request_id=$1",[rid]),true);
+  await review(true);
+  await db.query("update ai_adult_pilot set reviewed_at=now()-interval '91 days',expires_at=now()-interval '1 day' where user_id=$1",[alice]);
+  assert.equal((await reserve(alice)).code,'ai_unavailable');
+  const old=await value("select request_id v from ai_usage where created_at<now()-interval '400 days' limit 1");
+  assert.ok(old);
+  await db.query("update ai_usage set retry_of=$1 where request_id=$2",[old,rid]);
+  await db.query("insert into ai_usage(request_id,user_id,created_at,model,feature,status,admitted,generation_attempted,reserved_tokens) values(gen_random_uuid(),$1,now()-interval '430 days','gemini-test','chat','failed',true,true,99)",[alice]);
+  const cutoff="((now() at time zone 'UTC')::date-365)::timestamp at time zone 'UTC'";
+  const expected=await db.query("select count(*)::integer as n,coalesce(sum(total_tokens),0)::integer as tokens from ai_usage where created_at<"+cutoff);
+  await db.query("insert into ai_daily_counters values($1, (now() at time zone 'UTC')::date-366,1,9)",[bob]);
+  await db.query("insert into ai_audit(admin_id,action,created_at) values($1,'expired_test',now()-interval '400 days')",[owner]);
+  await db.exec(`insert into ai_quota_snapshots(project,model,metric,metric_id,limit_name,window_start,window_end,reported_limit,consumption,synced_at)
+    select project,model,metric,metric_id,limit_name,window_start-interval '40 days',window_end-interval '40 days',
+      reported_limit,consumption,synced_at-interval '40 days' from ai_quota_snapshots where metric='RPM' limit 1;
+    insert into ai_billing_snapshots(project,month_start,amount_usd,billing_through,synced_at)
+      values('example-project',(date_trunc('month',now() at time zone 'UTC')-interval '36 months')::date,
+        5,now()-interval '36 months',now());
+    insert into ai_archived_months values((date_trunc('month',now() at time zone 'UTC')-interval '36 months')::date,1,1,0,1,0,0);`);
+  const before=await value("select sum(charged_tokens)::integer v from ai_daily_counters where usage_date>=(now() at time zone 'UTC')::date-30");
+  const pruned=await value("select mannsathi_ai_prune() v");
+  assert.equal(pruned.requests,expected.rows[0].n);
+  assert.equal(pruned.expired_pilot,1);
+  assert.equal(pruned.audit,1);
+  assert.equal(pruned.counters,1);
+  assert.equal(pruned.billing,1);
+  assert.equal(pruned.quota,1);
+  assert.equal(await value("select retry_of v from ai_usage where request_id=$1",[rid]),null);
+  const archive=await db.query("select sum(requests)::integer as n,sum(known_tokens)::integer as tokens,sum(unknown_totals)::integer as missing from ai_archived_months");
+  assert.deepEqual(archive.rows[0], {...expected.rows[0],missing:1});
+  assert.equal((await value("select mannsathi_ai_prune() v")).requests,0);
+  assert.equal(await value("select sum(requests)::integer v from ai_archived_months"),expected.rows[0].n);
+  assert.equal(await value("select sum(charged_tokens)::integer v from ai_daily_counters where usage_date>=(now() at time zone 'UTC')::date-30"),before);
+  console.log('PASS 010 upgrade, finite defaults, guest and unapproved denial, private adult provisioning, revocation before generation, expiry and bounded idempotent retention.');
 }
 async function checkSnapshots() {
   const project='example-project';

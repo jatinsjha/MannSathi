@@ -28,7 +28,7 @@
         }
         return { Authorization: "Bearer " + session.access_token };
     }
-    async function request(path, { method = "GET", query = {}, body, responseType = "json", expectedUserId } = {}) {
+    async function request(path, { method = "GET", query = {}, body, responseType = "json", expectedUserId, signal } = {}) {
         const identity = identityVersion;
         const guest = new URLSearchParams(location.search).get("guest") === "true";
         const chat = path === "/api/chat";
@@ -36,6 +36,9 @@
         const auth = guest ? {} : await bearerHeaders(identity, expectedUserId);
         if (!guest && identity !== identityVersion) throw new ApiError("Your account changed during the request.", 401);
         const controller = new AbortController(), timer = setTimeout(() => controller.abort(), chat ? 90000 : 30000);
+        const abort = () => controller.abort();
+        if (signal?.aborted) abort();
+        else signal?.addEventListener("abort", abort, {once:true});
         try {
             const response = await fetch(path + "?" + new URLSearchParams(query), {
                 method, cache: "no-store", signal: controller.signal,
@@ -57,7 +60,7 @@
             if (error instanceof ApiError) throw error;
             if (chat) throw new ApiError("The chat connection was interrupted. Use Try again to check this request.");
             throw new ApiError(error.name === "AbortError" ? "This request timed out. Refresh to check whether your change was saved." : "Could not reach your workspace. Check your connection and try again.");
-        } finally { clearTimeout(timer); }
+        } finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
     }
     window.MannSathiAPI = Object.freeze({ request, ApiError });
 })();

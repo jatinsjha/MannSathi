@@ -104,7 +104,7 @@ const server = http.createServer(async (req, res) => {
   if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
   try{
     let data=fs.readFileSync(file);
-    if(path.extname(file)==='.html')data=Buffer.from(data.toString('utf8').replace('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','/test-supabase.js'));
+    if(path.extname(file)==='.html')data=Buffer.from(data.toString('utf8').replace('js/vendor/supabase-2.119.2/supabase.js','/test-supabase.js'));
     res.writeHead(200,{'Content-Type':{'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream'});res.end(data);
   }catch{res.writeHead(404);res.end('Not found');}
 });
@@ -285,8 +285,8 @@ async function recoveryAndRoles() {
   await navigate('teacher-login.html');await waitFor('!document.getElementById("role-login-message-link").hidden');assert.equal(await evaluate('location.pathname'),'/teacher-login.html');
   await fill({email:'a@example.test',password:'test-password'});await evaluate('document.getElementById("login-form").requestSubmit()');await waitFor('document.getElementById("form-message").textContent.includes("does not have approved teacher access")');assert.equal(await evaluate('location.pathname'),'/teacher-login.html');assert.equal(await evaluate('localStorage.getItem("tasks-test-user")'),'none');
   await navigate('app.html?guest=true');await click('#open-tasks');await waitFor('!document.getElementById("tasks-auth").hidden');assert.equal(await evaluate('document.getElementById("tasks-create").disabled'),true);assert.equal((await visibleIds()).length,0);
-  await click('#open-chat');await fill({'message-input':'Hello from guest'});await evaluate('document.getElementById("chat-form").requestSubmit()');await waitFor('!!document.querySelector(".message.assistant")');assert.match(await evaluate('document.querySelector(".message.assistant").textContent'),/Chat still works/);
-  console.log('PASS expired-session clearing, offline load/save recovery, incorrect teacher-login denial and guest Task denial with working chat');
+  await click('#open-chat'); await waitFor('!document.getElementById("chat-access-signin").hidden'); assert.equal(await evaluate('document.getElementById("chat-form").hidden'),true);
+  console.log('PASS expired-session clearing, offline load/save recovery, incorrect teacher-login denial, guest Task denial and guest chat sign-in');
 }
 (async()=>{
   await initializeBrowser();await personalChecks();await teacherAssignments();await layoutAndNavigation();await recoveryAndRoles();

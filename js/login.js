@@ -89,6 +89,10 @@ async function verifyLoginRole(supabaseClient, session) {
 // ── Check if already logged in ───────────────────────────────
 
 (async function checkSession() {
+    if (new URLSearchParams(window.location.search).get("recovered") === "1") {
+        setMessage("Password updated. Sign in with your new password.");
+        return;
+    }
     let foundSession = false;
     setLoading(true);
     try {
@@ -199,26 +203,20 @@ loginForm.addEventListener("submit", async function (event) {
 
 // ── Forgot password ───────────────────────────────────────────
 
+let sendingReset = false;
 forgotPassword.addEventListener("click", async function (event) {
-    event.preventDefault();
-
+    if (sendingReset) { event.preventDefault(); return; }
     const email = emailInput.value.trim();
-
-    if (!email) {
-        setMessage("Please enter your email address first.", true);
-        setInputState(emailInput, "error");
-        emailInput.focus();
-        return;
-    }
-
+    if (!email) return; // Follow the role-specific link to the recovery form.
+    event.preventDefault();
     if (!isValidEmail(email)) {
         setMessage("Please enter a valid email address.", true);
         setInputState(emailInput, "error");
         return;
     }
 
-    forgotPassword.style.pointerEvents = "none";
-    forgotPassword.style.opacity = "0.6";
+    sendingReset = true;
+    forgotPassword.setAttribute("aria-disabled", "true");
 
     try {
         setMessage("Sending password reset email...");
@@ -228,20 +226,19 @@ forgotPassword.addEventListener("click", async function (event) {
         const { error } = await supabaseClient.auth.resetPasswordForEmail(
             email,
             {
-                redirectTo: window.location.origin + (expectedLoginRole === "teacher" ? "/teacher-login.html" : "/index.html")
+                redirectTo: window.location.origin + "/recover.html" + (expectedLoginRole === "teacher" ? "?role=teacher" : "")
             }
         );
 
-        if (error) throw error;
+        if (error && error.code !== "user_not_found") throw error;
 
-        setMessage("Password reset link sent! Please check your email.");
+        setMessage("If this email belongs to a MannSathi account, check your inbox for a reset link.");
         setInputState(emailInput, "success");
 
     } catch (error) {
-        console.error("Password reset error:", error);
-        setMessage(error.message || "Could not send reset email.", true);
+        setMessage(error.status === 429 ? "Too many reset requests. Please try again later." : "Could not send the reset email. Please try again.", true);
     } finally {
-        forgotPassword.style.pointerEvents = "";
-        forgotPassword.style.opacity = "";
+        sendingReset = false;
+        forgotPassword.setAttribute("aria-disabled", "false");
     }
 });

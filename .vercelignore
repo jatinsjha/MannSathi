@@ -1,0 +1,14 @@
+.preview/
+.git/
+.env
+.env.*
+docs/
+tests/
+database/
+scripts/
+**/__pycache__/
+**/*.pyc
+local_test.py
+structure.txt
+/login.js
+/README.md

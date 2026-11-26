@@ -1,4 +1,5 @@
 import * as view from "./admin-views.js";
+import {mountMfa} from "./admin-mfa.js";
 
 const $ = id => document.getElementById(id);
 const panel = $("admin-panel"), content = $("admin-content"), entry = $("open-admin"), filters = $("admin-filters");
@@ -15,6 +16,7 @@ function period(preset) {
 }
 let active = "overview", page = 1, studentId = null, preset = "7", range = period("7");
 let userId = null, authorized = false, version = 0, loadId = 0, studentFilter = {}, logFilter = {};
+let needsMfa = false, unmountMfa = null;
 const isGuest = new URLSearchParams(location.search).get("guest") === "true";
 const dateQuery = () => preset === "custom" ? range : {period:preset};
 function status(message = "", error = false) {
@@ -22,13 +24,23 @@ function status(message = "", error = false) {
     $("admin-status").classList.toggle("is-error",error);
 }
 function denied() {
+    clearMfa(); needsMfa = false;
     authorized = false; entry.hidden = true; content.replaceChildren(); filters.replaceChildren();
     $("admin-sections").replaceChildren(); $("admin-refresh").hidden = true;
     content.setAttribute("aria-busy","false");
 }
 function reportError(error) {
     if (error.status === 401 || error.status === 403) denied();
+    if (error.data?.code === "mfa_required") {needsMfa = true; entry.hidden = false; if (!panel.hidden) drawMfa(); return;}
     status(error.message,true);
+}
+function clearMfa() {
+    if (unmountMfa) {unmountMfa(); unmountMfa=null;}
+}
+function drawMfa() {
+    clearMfa(); status(); $("admin-heading").textContent="AI administration";
+    const actor=userId, epoch=version;
+    unmountMfa=mountMfa(content,()=>identity(actor,true),()=>userId===actor && version===epoch);
 }
 function choose(name, newPage = 1) {
     active = name; page = newPage;
@@ -149,8 +161,9 @@ async function load(message) {
         reportError(e);
     } finally { if (id === loadId) content.setAttribute("aria-busy","false"); }
 }
-async function identity(id) {
-    if (userId === id && id) return;
+async function identity(id, recheck=false) {
+    if (userId === id && id && !recheck) return;
+    const returnToAdmin = recheck && !panel.hidden;
     userId = id; const epoch = ++version; ++loadId;
     denied(); status(); studentId = null; studentFilter = {}; logFilter = {}; active = "overview"; page = 1; preset = "7"; range = period(preset);
     if (!panel.hidden) window.MannSathiWorkspace.show("dashboard");
@@ -159,18 +172,23 @@ async function identity(id) {
         const result = await api("access");
         if (version !== epoch || result.admin !== true) return;
         authorized = true; entry.hidden = false; $("admin-refresh").hidden = false;
-        if (location.hash === "#ai-admin") window.MannSathiWorkspace.show("admin");
+        if (returnToAdmin || location.hash === "#ai-admin") window.MannSathiWorkspace.show("admin");
     } catch (e) {
-        if (version === epoch && location.hash === "#ai-admin") {
-            window.MannSathiWorkspace.show("admin"); status(e.message,true);
+        if (version === epoch) {
+            if (e.data?.code === "mfa_required") {needsMfa=true; entry.hidden=false;}
+            if (returnToAdmin || location.hash === "#ai-admin") {
+                window.MannSathiWorkspace.show("admin"); if (!needsMfa) status(e.message,true);
+            }
         }
     }
 }
-entry.addEventListener("click",() => { if (authorized) window.MannSathiWorkspace.show("admin"); });
+entry.addEventListener("click",() => { if (authorized || needsMfa) window.MannSathiWorkspace.show("admin"); });
 $("admin-refresh").addEventListener("click",() => load());
 window.addEventListener("mannsathi:view",e => {
     ++loadId;
+    clearMfa();
     if (e.detail === "admin" && authorized) choose(active,page);
+    else if (e.detail === "admin" && needsMfa) drawMfa();
     else content.replaceChildren();
 });
 if (!isGuest) window.supabaseReady.then(async client => {
@@ -178,6 +196,11 @@ if (!isGuest) window.supabaseReady.then(async client => {
     client.auth.onAuthStateChange((event,session) => {
         events++;
         const nextId = session?.user?.id ?? null;
+        if (event === "TOKEN_REFRESHED" && nextId && nextId === userId && authorized) {
+            const current=events;
+            setTimeout(()=>{if (current===events) identity(nextId,true);},0);
+            return;
+        }
         if (nextId !== userId || event === "SIGNED_OUT") {
             // Do HTTP work outside the Supabase Auth callback lock.
             if (userId) { ++version; ++loadId; denied(); userId=null; }

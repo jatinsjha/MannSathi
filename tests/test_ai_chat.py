@@ -1,10 +1,12 @@
 """Chat entry-point tests using fake Gemini and Supabase transports, without private content in the ledger."""
 import http.client
+import hashlib
 import io
 import json
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from urllib.error import HTTPError, URLError
 from unittest.mock import patch
@@ -28,7 +30,10 @@ class ChatTests(unittest.TestCase):
         for p in (patch.dict("os.environ", {"SUPABASE_URL": "https://example.supabase.co",
                                              "SUPABASE_KEY": "sb_publishable_client",
                                              "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_server",
-                                             "GEMINI_API_KEY": "test-google-key", "GEMINI_MODEL": "models/model-A"}),
+                                             "GEMINI_API_KEY": "test-google-key", "GEMINI_MODEL": "models/model-A",
+                                             "GEMINI_CLOUD_PROJECT": "mannsathi-test",
+                                             "GEMINI_PAID_REVIEW_UNTIL": datetime.now(timezone.utc).date().isoformat(),
+                                             "GEMINI_PAID_PROJECT_ATTESTATION": hashlib.sha256(b"mannsathi-test\ntest-google-key").hexdigest()}),
                   patch.object(supabase, "urlopen", side_effect=self.auth),
                   patch.object(ai_service._transport, "open", side_effect=self.storage),
                   patch.object(chat._count_transport, "open", side_effect=self.count)):
@@ -70,14 +75,16 @@ class ChatTests(unittest.TestCase):
         self.assertNotIn(PRIVATE, str(data))
         self.assertNotIn("test-google-key", str(data))
         self.calls.append((action, data))
+        if action == "pilot_eligible":
+            return stream(self.deny_admission is None)
         rid = data["p_request_id"]
-        if action == "reserve":
+        if action == "pilot_reserve":
             if rid in self.rows:
                 return stream({"allowed": False, "code": "duplicate"})
             self.rows[rid] = {"status": "pending", **data}
             if self.deny_admission:
                 return stream({"allowed": False, "code": self.deny_admission})
-        elif action == "resize":
+        elif action == "pilot_resize":
             if self.deny_resize:
                 return stream({"allowed": False, "code": self.deny_resize})
         elif action == "finish":
@@ -112,7 +119,7 @@ class ChatTests(unittest.TestCase):
 
     def test_verified_identity_prompt_reservation_and_measured_usage(self):
         self.assertEqual(self.send(), (200, {"reply": "Study plan", "request_id": self.request_id}))
-        self.assertEqual([action for action, _ in self.calls], ["reserve", "resize", "finish"])
+        self.assertEqual([action for action, _ in self.calls], ["pilot_reserve", "pilot_resize", "finish"])
         self.assertEqual(self.calls[0][1]["p_user_id"], ALICE)
         self.assertEqual(self.calls[0][1]["p_reserved_tokens"], 1)
         self.assertEqual(self.calls[1][1]["p_reserved_tokens"], 23 + 1024)
@@ -168,19 +175,43 @@ class ChatTests(unittest.TestCase):
         self.generate.assert_called_once()
         self.assertEqual(self.send()[0], 409)
 
-    def test_explicit_guest_pool_and_invalid_tokens(self):
-        self.deny_admission = "guest_requests"
+    def test_guests_and_invalid_or_unapproved_accounts_cannot_dispatch(self):
         status, body = self.send(token=None)
-        self.assertEqual(status, 429)
-        self.assertIn("Sign in", body["error"])
-        self.assertIsNone(self.rows[self.request_id]["p_user_id"])
+        self.assertEqual((status, body["code"]), (403, "ai_unavailable"))
+        self.assertFalse(self.calls)
         self.assertFalse(self.count_calls)
         self.assertEqual(self.send(token="Bearer expired")[0], 401)
         self.assertEqual(self.send(token="")[0], 401)
         self.anonymous = True
         self.assertEqual(self.send()[0], 403)
+        self.anonymous = False
+        self.deny_admission = "ai_unavailable"
+        self.assertEqual(self.send()[0], 403)
         self.assertEqual(len(self.calls), 1)
         self.generate.assert_not_called()
+
+    def test_capability_and_project_bound_billing_attestation(self):
+        def capability(token):
+            conn = http.client.HTTPConnection("127.0.0.1",self.httpd.server_port,timeout=5)
+            conn.request("GET","/api/chat",headers={"Authorization":"Bearer "+token} if token else {})
+            res=conn.getresponse()
+            result=res.status,json.loads(res.read())
+            conn.close()
+            return result
+        self.assertEqual(capability(None),(200,{"available":False}))
+        self.assertEqual(capability("verified"),(200,{"available":True}))
+        self.assertEqual(capability("expired")[0],401)
+        self.deny_admission="ai_unavailable"
+        self.assertEqual(capability("verified"),(200,{"available":False}))
+        self.calls.clear()
+        for changed in ({"GEMINI_PAID_PROJECT_ATTESTATION":""},{"GEMINI_API_KEY":"rotated"},
+                        {"GEMINI_CLOUD_PROJECT":"another-project"},{"GEMINI_PAID_REVIEW_UNTIL":"2000-01-01"},
+                        {"GEMINI_PAID_REVIEW_UNTIL":"2099-01-01"}):
+            with patch.dict("os.environ",changed):
+                self.assertEqual(capability("verified"),(200,{"available":False}))
+                self.assertEqual(self.send()[0],503)
+        self.assertFalse(self.calls)
+        self.assertFalse(self.count_calls)
 
     def test_disabled_and_daily_monthly_caps_prevent_generation(self):
         self.deny_admission = "student_restricted"
@@ -215,8 +246,7 @@ class ChatTests(unittest.TestCase):
         self.request_id = str(uuid4())
         with patch.dict("os.environ", {"GEMINI_API_KEY": ""}):
             self.assertEqual(self.send()[0], 503)
-        self.assertEqual(self.rows[self.request_id]["p_error_category"], "configuration")
-        self.assertIs(self.rows[self.request_id]["p_generation_attempted"], False)
+        self.assertNotIn(self.request_id,self.rows)
 
     def test_missing_storage_or_privileged_backend_key_fails_closed(self):
         with patch.dict("os.environ", {"SUPABASE_SERVICE_ROLE_KEY": "sb_publishable_client"}):
@@ -235,7 +265,7 @@ class ChatTests(unittest.TestCase):
         self.assertEqual((row["p_error_category"], row["p_generation_attempted"]), ("provider_rate_limit", False))
         self.request_id = str(uuid4())
         def interrupted_resize(name, data):
-            if name == "mannsathi_ai_resize":
+            if name == "mannsathi_ai_pilot_resize":
                 raise supabase.ApiError(503, "Storage unavailable.")
             return ai_service.rpc(name, data)
         with patch.object(chat, "rpc", side_effect=interrupted_resize):

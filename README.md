@@ -1,5 +1,7 @@
 # MannSathi — AI Student Well-being Companion
 
+For this release, start with [public launch operations](docs/launch-operations.md) and [Help, privacy and support setup](docs/help-and-support.md). Deploy the recovery page and complete both real-email checks before announcing the app. The support inbox requires migration 011 and AI launch controls require migration 010 after 009.
+
 MannSathi is an AI-powered student well-being companion designed to help students navigate academic stress, assignment pressure, exam preparation, and everyday challenges.
 
 Built with a simple web interface and the Google Gemini API, MannSathi encourages students to express what is on their mind and offers concise, practical suggestions to help them take the next step.
@@ -60,7 +62,7 @@ AI administration extends the existing workspace with metered chat, student limi
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/MannSathi.git
+git clone https://github.com/jatinsjha/MannSathi.git
 cd MannSathi
 ```
 
@@ -102,7 +104,7 @@ Replace the placeholder with your own API key.
 
 Use only a Supabase publishable or legacy anon key as `SUPABASE_KEY`; `/api/config` rejects secret/service-role keys. Review the read-only schema findings and approve the proposed `database/migrations/000_profile_privileges.sql` (profile grants) and `database/migrations/001_smart_calendar.sql` (calendar) before applying them in that order. Rerun `database/inspect_calendar_schema.sql` if your schema has changed. See the calendar guide for constraints, policies, and two-account verification.
 
-For this workspace the user confirmed 000/001 are already applied, and the supplied diagnostic confirmed migration 002. Check whether 003 is installed before adding Focus migration 004. Run the read-only `database/inspect_focus_schema.sql`, review `database/migrations/004_focus_subjects.sql`, then apply it once as described in the Focus guide. Live migration 004 has not been applied by the agent. Teachers require administrator provisioning; public signup cannot grant teacher access. Add `/teacher-login.html` to Supabase Auth's allowed password-reset redirects.
+For this workspace the user confirmed 000/001 are already applied, and the supplied diagnostic confirmed migration 002. Check whether 003 is installed before adding Focus migration 004. Run the read-only `database/inspect_focus_schema.sql`, review `database/migrations/004_focus_subjects.sql`, then apply it once as described in the Focus guide. Live migration 004 has not been applied by the agent. Teachers require administrator provisioning; public signup cannot grant teacher access. Allow the exact student and teacher recovery URLs on the deployed origin: `/recover.html` and `/recover.html?role=teacher`.
 
 **Never commit `.env`, `.env.local`, or API keys to GitHub.**
 
@@ -183,7 +185,7 @@ This project is available under the MIT License. See [LICENSE](LICENSE) for deta
 
 **Jatin Jha**
 
-GitHub: https://github.com/YOUR_GITHUB_USERNAME
+GitHub: https://github.com/jatinsjha/MannSathi
 
 Live Project: https://mannsathi.vercel.app
 

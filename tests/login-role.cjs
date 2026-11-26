@@ -24,11 +24,11 @@ async function setup(expected, actual, options = {}) {
     signOut: async () => { signOuts++; return { error: null }; },
     resetPasswordForEmail: async (_email, settings) => { resetTarget = settings.redirectTo; return { error: null }; }
   } };
-  const location = { href: '', origin: 'https://example.test' };
+  const location = { href: '', search: options.search || '', origin: 'https://example.test' };
   const context = {
     window: { supabaseReady: Promise.resolve(client), location },
     document: { body: { dataset: { loginRole: expected } }, getElementById: id => elements[id] },
-    console: { error() {} }, AbortController, setTimeout, clearTimeout,
+    console: { error() {} }, URLSearchParams, AbortController, setTimeout, clearTimeout,
     fetch: async (url, request) => {
       capturedRequest = { url, request };
       return { ok: !options.unavailable, json: async () => options.unavailable ? { error: 'Access verification unavailable.' } : { role: actual } };
@@ -48,6 +48,13 @@ async function submit(fixture) {
 (async () => {
   for (const role of ['student', 'teacher']) {
     const fixture = await setup(role, role);
+    const route='recover.html'+(role==='teacher'?'?role=teacher':'');
+    const page=fs.readFileSync(role==='teacher'?'teacher-login.html':'index.html','utf8');
+    assert(page.includes('href="'+route+'" id="forgot-password"'));
+    let prevented=false;
+    await fixture.elements['forgot-password'].handlers.click({preventDefault(){prevented=true;}});
+    assert.equal(prevented,false,'empty email follows the recovery link');
+    assert.equal(fixture.resetTarget(),null);
     await submit(fixture);
     assert.equal(fixture.location.href, 'app.html');
     assert.equal(fixture.request().url, '/api/tasks?action=context');
@@ -56,7 +63,7 @@ async function submit(fixture) {
     assert.equal(fixture.signOuts(), 0);
     assert.equal(fixture.elements['login-button'].disabled, false);
     await fixture.elements['forgot-password'].handlers.click({ preventDefault() {} });
-    assert.equal(fixture.resetTarget(), 'https://example.test/' + (role === 'teacher' ? 'teacher-login.html' : 'index.html'));
+    assert.equal(fixture.resetTarget(), 'https://example.test/recover.html' + (role === 'teacher' ? '?role=teacher' : ''));
   }
   for (const [expected, actual] of [['teacher', 'student'], ['student', 'teacher']]) {
     const fixture = await setup(expected, actual);
@@ -79,5 +86,8 @@ async function submit(fixture) {
   assert.equal(wrongExisting.signOuts(), 1);
   const correctExisting = await setup('teacher', 'teacher', { existing: true });
   assert.equal(correctExisting.location.href, 'app.html');
+  const recovered = await setup('teacher','teacher',{ existing:true,search:'?recovered=1' });
+  assert.equal(recovered.location.href,'');
+  assert.match(recovered.elements['form-message'].textContent,/new password/);
   console.log('PASS separate role sign-ins, trusted token context, wrong-role logout, fail-closed lookup, existing sessions, and reset routing');
 })().catch(error => { console.error(error); process.exitCode = 1; });

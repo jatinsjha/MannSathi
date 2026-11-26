@@ -85,7 +85,7 @@
         try {
             const client = await window.supabaseReady;
             if (current !== epoch) return;
-            const result = await client.auth.resetPasswordForEmail(targetEmail, { redirectTo: location.origin + (role === "teacher" ? "/teacher-login.html" : "/index.html") });
+            const result = await client.auth.resetPasswordForEmail(targetEmail, { redirectTo: location.origin + "/recover.html" + (role === "teacher" ? "?role=teacher" : "") });
             if (result.error) throw result.error;
             if (current === epoch) $("settings-account-status").textContent = "Password reset email sent. Check your inbox.";
         } catch (error) { if (current === epoch) $("settings-account-status").textContent = error.message || "Could not send the reset email."; }

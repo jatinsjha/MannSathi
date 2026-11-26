@@ -4,7 +4,7 @@ This guide records the Calendar implementation. Task Manager, separate teacher/s
 
 ## Existing architecture and reuse
 
-The repository serves static HTML/CSS/vanilla JavaScript, with Python handlers in `api/` deployed by Vercel. `index.html` and `signup.html` use the Supabase CDN SDK through `js/supabase.js` and `/api/config`. `app.html` loads the current chat workspace from `js/app.js`; `/api/chat` validates conversations and calls Gemini. Chat history is stored in this browser's localStorage. The active styles are `css/auth.css`, `css/account.css`, `css/workspace.css`, and their shared `css/cosmic.css` palette. Older CSS files and the unused root `login.js` are left intact.
+The repository serves static HTML/CSS/vanilla JavaScript, with Python handlers in `api/` deployed by Vercel. `index.html` and `signup.html` use the bundled Supabase SDK through `js/supabase.js` and `/api/config`. `app.html` loads the current chat workspace from `js/app.js`; `/api/chat` validates conversations and calls Gemini. New chats use page memory. Settings can open or erase earlier browser-local history. The active styles are `css/auth.css`, `css/account.css`, `css/workspace.css`, and their shared `css/cosmic.css` palette. Older CSS files and the unused root `login.js` are left intact.
 
 Calendar reuses the workspace, theme, dialogs, mobile drawer, Supabase initialization, and existing account flows. New date utilities, a service, and a UI module keep calendar logic separate from chat. Opening Chat, New chat, a history item, or Ctrl/Cmd+K returns to the existing conversation workspace.
 
@@ -14,7 +14,7 @@ Previously `/api/config` returned any configured `SUPABASE_KEY`. It now accepts 
 
 Every calendar request verifies the Bearer token through Supabase `/auth/v1/user`. The returned identity owns new events; ownership fields supplied in a request body are rejected. Reads, edits, and deletes filter by both the verified owner and (when applicable) event ID. Requests to PostgREST use the original student's Bearer token plus the public key, preserving RLS. Missing or foreign event IDs return the same 404. Responses and credentials are never cached in the calendar service. Calendar records are not saved to localStorage. Visible events are cleared on account changes.
 
-Existing guest chat and its public API remain available. Existing chat history is browser-wide, not account-scoped, and chat requests are not tied to Supabase identity. These are existing limitations, not authorization for calendar access. No profile or batch permissions are assumed to establish identity. No student permission-approval path is added.
+Guests can explore the study workspace. Sending AI messages requires a verified account in the adult pilot. See [launch operations](launch-operations.md) for current chat controls. These are existing limitations, not authorization for calendar access. No profile or batch permissions are assumed to establish identity. No student permission-approval path is added.
 
 ## Database proposal: review before applying
 
@@ -73,7 +73,7 @@ After the migration and deployment, verify against actual Supabase using two sep
 3. Verify invalid ranges/mixed all-day and timed boundaries fail in both API and direct database writes, and owner changes fail. Never send access tokens in chat or commit them.
 4. Check day/week/month, Today/previous/next, today's schedule, upcoming events, DST dates, different browser timezones, both themes, mobile menu, and the editor at 320px, 390px, and desktop widths.
 5. Expire a session, disconnect the network, and check loading/errors/retry. Verify no other account's events remain visible after switching accounts.
-6. Confirm login/signup/email verification and existing guest/signed-in chat still work with the deployed configuration.
+6. Confirm login, signup, email verification, guest chat closure and approved pilot chat with the deployed configuration.
 
 The supplied live schema has been reviewed. Live CRUD, persistence across authentication, database constraints, and RLS verification remain pending until the SQL is approved/applied and the app deployed. No database changes have been executed. Do not describe fixture tests as live database verification.
 

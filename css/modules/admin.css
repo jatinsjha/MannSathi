@@ -58,3 +58,9 @@
   .admin-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .admin-controls input, .admin-controls input[type="search"] { width: 100%; }
 }
+.admin-mfa {max-width:560px}
+.admin-mfa p {line-height:1.55; color:var(--secondary)}
+.admin-mfa form {display:grid; justify-items:start; gap:10px}
+.admin-mfa label {display:grid; gap:5px}
+.admin-mfa img {padding:7px; background:#fff; border-radius:8px}
+.admin-mfa code {display:block; max-width:100%; overflow-wrap:anywhere; font-size:14px}

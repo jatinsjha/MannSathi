@@ -51,7 +51,7 @@ const server = http.createServer(async (req, res) => {
   }
   const file = path.resolve(root, '.' + (url.pathname === '/' ? '/app.html' : decodeURIComponent(url.pathname)));
   if (!file.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }
-  try { let data = fs.readFileSync(file); if (path.extname(file) === '.html') data = Buffer.from(data.toString('utf8').replace('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', '/test-supabase.js')); res.writeHead(200, { 'Content-Type': { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream' }); res.end(data); } catch { res.writeHead(404); res.end(); }
+  try { let data = fs.readFileSync(file); if (path.extname(file) === '.html') data = Buffer.from(data.toString('utf8').replace('js/vendor/supabase-2.119.2/supabase.js', '/test-supabase.js')); res.writeHead(200, { 'Content-Type': { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream' }); res.end(data); } catch { res.writeHead(404); res.end(); }
 });
 async function navigate(query = '') { await browser.command('Page.navigate', { url: base + '/app.html' + query }); await browser.wait('document.readyState === "complete" && !!window.MannSathiDashboard'); await browser.evaluate('document.fonts.ready'); }
 async function ready() { await browser.wait('document.getElementById("dashboard-panel").getAttribute("aria-busy") === "false" && document.getElementById("dashboard-status").textContent.includes("up to date")'); }

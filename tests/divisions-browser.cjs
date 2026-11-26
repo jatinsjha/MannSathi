@@ -124,7 +124,7 @@ const server = http.createServer(async (req, res) => {
   if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
   try{
     let data=fs.readFileSync(file);
-    if(path.extname(file)==='.html')data=Buffer.from(data.toString('utf8').replace('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','/test-supabase.js'));
+    if(path.extname(file)==='.html')data=Buffer.from(data.toString('utf8').replace('js/vendor/supabase-2.119.2/supabase.js','/test-supabase.js'));
     res.writeHead(200,{'Content-Type':{'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream'});res.end(data);
   }catch{res.writeHead(404);res.end('Not found');}
 });

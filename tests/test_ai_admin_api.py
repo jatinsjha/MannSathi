@@ -1,5 +1,6 @@
 """Exercise the HTTP entry points with an isolated Supabase Auth/PostgREST transport."""
 import csv
+import base64
 import http.client
 import io
 import json
@@ -22,6 +23,16 @@ STUDENT = "00000000-0000-4000-8000-000000000001"
 TEACHER = "00000000-0000-4000-8000-000000000011"
 
 
+def fixture_jwt(claims):
+    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+    return "fixture." + payload + ".fixture"
+
+
+OWNER_TOKENS = {name: fixture_jwt(claims) for name, claims in {
+    "owner": {"sub": OWNER, "aal": "aal2"}, "owner-aal1": {"sub": OWNER, "aal": "aal1"},
+    "owner-missing": {"sub": OWNER}, "owner-mismatch": {"sub": STUDENT, "aal": "aal2"}}.items()}
+
+
 class Reply(io.BytesIO):
     def __init__(self, value):
         super().__init__(json.dumps(value).encode())
@@ -40,7 +51,7 @@ class ServerTest(unittest.TestCase):
         conn = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=4)
         headers = {"Content-Type": "application/json"}
         if token is not None:
-            headers["Authorization"] = "Bearer " + token
+            headers["Authorization"] = "Bearer " + OWNER_TOKENS.get(token, token)
         data = json.dumps(body).encode() if isinstance(body, dict) else body
         conn.request(method, path, data, headers)
         res = conn.getresponse()
@@ -69,7 +80,7 @@ class AdminHTTP(ServerTest):
         self.assertTrue(req.full_url.endswith("/auth/v1/user"))
         self.assertEqual(req.get_header("Apikey"), "sb_publishable_example")
         name = req.get_header("Authorization").split()[1]
-        uid = {"owner": OWNER, "student": STUDENT, "teacher": TEACHER, "anonymous": STUDENT}.get(name)
+        uid = OWNER if name in OWNER_TOKENS.values() else {"student": STUDENT, "teacher": TEACHER, "anonymous": STUDENT}.get(name)
         if not uid:
             raise HTTPError(req.full_url, 401, "unauthorized", {}, Reply({}))
         return Reply({"id": uid, "is_anonymous": name == "anonymous", "user_metadata": {"role": "admin"}})
@@ -83,7 +94,7 @@ class AdminHTTP(ServerTest):
         if args["p_admin_id"] != OWNER or not self.gate:
             code = 429 if not self.gate else 403
             raise HTTPError(req.full_url, code, "fixture", {}, Reply({"code": f"PT{code}"}))
-        if name == "mannsathi_ai_admin_gate":
+        if name == "mannsathi_ai_admin_session":
             return Reply(True)
         if name == "mannsathi_ai_admin_change":
             return Reply(args["p_values"])
@@ -98,7 +109,7 @@ class AdminHTTP(ServerTest):
                 code, raw, _ = self.call("/api/admin"+path, token=token)
                 self.assertIn(code, [401,403])
                 self.assertNotIn(STUDENT.encode(), raw)
-        self.assertTrue(all(n == "mannsathi_ai_admin_gate" for n, _ in self.calls))
+        self.assertTrue(all(n == "mannsathi_ai_admin_session" for n, _ in self.calls))
         status, body, headers = self.call("/api/admin?action=access")
         self.assertEqual((status,json.loads(body)), (200,{"admin":True}))
         self.assertIn("no-store", headers["Cache-Control"])
@@ -111,10 +122,36 @@ class AdminHTTP(ServerTest):
         self.assertEqual(self.call("/api/admin?action=global","POST",body={"admin_id":OWNER,"values":{"enabled":True}})[0],400)
         self.assertFalse(any(n == "mannsathi_ai_admin_change" for n,_ in self.calls))
 
+    def test_admin_mfa_is_bound_to_the_authenticated_token_and_member(self):
+        for token in ("owner-aal1", "owner-missing", "owner-mismatch"):
+            for action in ("access", "overview", "export"):
+                status, raw, _ = self.call("/api/admin?action=" + action, token=token)
+                self.assertEqual((status, json.loads(raw)["code"]), (403, "mfa_required"))
+            self.assertEqual(self.call("/api/admin?action=global", "POST", token, {"values":{"enabled":False}})[0],403)
+        forged = fixture_jwt({"sub": OWNER, "aal":"aal2", "extra":"tampered"})
+        self.assertEqual(self.call("/api/admin?action=overview", token=forged)[0], 401)
+        self.assertTrue(all(name == "mannsathi_ai_admin_session" for name, _ in self.calls))
+
+    def test_read_only_report_points_to_migration_after_admin_gate(self):
+        def reject_read_only_report(request, timeout):
+            if request.full_url.endswith("/mannsathi_ai_report"):
+                raise HTTPError(request.full_url, 405, "fixture", {},
+                                Reply({"code": "25006", "message": "private database details"}))
+            return self.sql(request, timeout)
+
+        with patch.object(ai_service._transport, "open", reject_read_only_report):
+            status, body, _ = self.call("/api/admin?action=overview")
+            self.assertEqual(status, 503)
+            self.assertIn("migration 009", json.loads(body)["error"])
+            self.assertNotIn(b"private database details", body)
+            self.assertEqual(self.call("/api/admin?action=overview", token="student")[0], 403)
+
     def test_validated_filtering_and_pagination(self):
         self.report={"rows":[],"total":0,"page":2,"page_size":5}
         query = "&start=2026-02-01&end=2026-02-28&class_code=25cs&division=A&status=warning&sort=tokens&q=Alice&page=2&page_size=5"
-        self.assertEqual(self.call("/api/admin?action=students"+query)[0],200)
+        with patch("api.admin.datetime", wraps=datetime) as clock:
+            clock.now.return_value = datetime(2026,3,1,tzinfo=timezone.utc)
+            self.assertEqual(self.call("/api/admin?action=students"+query)[0],200)
         filters=self.calls[-1][1]["p_filters"]
         self.assertEqual(filters["page"],2)
         self.assertEqual(filters["class_code"],"25cs")
@@ -154,7 +191,8 @@ class AdminHTTP(ServerTest):
             self.assertEqual(self.calls[-1][1]["p_target"],STUDENT)
             self.assertEqual(self.calls[-1][1]["p_admin_id"],OWNER)
         for values in ({"enabled":1}, {"monthly_token_limit":-1}, {"warning_thresholds":[75,75]},
-                       {"guest_token_limit":True},{"monthly_budget":-10},{"user_id":OWNER}):
+                       {"guest_token_limit":True},{"guest_request_limit":1},{"monthly_token_limit":None},
+                       {"monthly_budget":-10},{"user_id":OWNER}):
             self.assertEqual(self.call("/api/admin?action=global","POST",body={"values":values})[0],400)
         self.assertEqual(self.call("/api/admin?action=global","POST",body=b'{"values":{"enabled":true,"enabled":false}}')[0],400)
         self.assertEqual(self.call("/api/admin?action=pricing","POST",body={"values":{

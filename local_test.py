@@ -34,9 +34,10 @@ from api.calendar import dispatch as calendar_dispatch  # noqa: E402
 from api.tasks import dispatch as tasks_dispatch  # noqa: E402
 from api.focus import dispatch as focus_dispatch  # noqa: E402
 from api.admin import dispatch as admin_dispatch  # noqa: E402
+from api.support import dispatch as support_dispatch  # noqa: E402
 
 
-PUBLIC_PAGES = {"index.html", "app.html", "signup.html", "teacher-login.html", "admin.html"}
+PUBLIC_PAGES = {"index.html", "app.html", "signup.html", "teacher-login.html", "help.html", "recover.html"}
 PUBLIC_ASSETS = {"css": {".css"}, "js": {".js"}, "images": {".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".avif"}}
 
 
@@ -85,6 +86,8 @@ class LocalHandler(SimpleHTTPRequestHandler):
         return stream
 
     def do_POST(self):
+        if self.path.split("?")[0] == "/api/support":
+            return support_dispatch(self)
         if self.path.split("?")[0] == "/api/admin":
             return admin_dispatch(self, "POST")
         if self.path.split("?")[0] == "/api/focus":

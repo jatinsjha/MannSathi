@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.request import Request, build_opener
 from uuid import UUID, uuid4
 
-from api.shared.ai_service import NoRedirect, configured_model, rpc, verified_user_id
+from api.shared.ai_service import NoRedirect, configured_model, paid_pilot_configured, rpc, verified_user_id
 from api.shared.supabase import ApiError
 
 SYSTEM_INSTRUCTION = """
@@ -65,6 +65,7 @@ SYSTEM_CONTENT = {"parts": [{"text": SYSTEM_INSTRUCTION}]}
 TEMPERATURE = 0.7
 
 DENIALS = {
+    "ai_unavailable": (403, "AI chat is available to approved adult pilot participants."),
     "duplicate": (409, "MannSathi has already received this request. Request a new reply to try again."),
     "invalid_retry": (409, "This earlier request cannot be retried. Start a new message."),
     "window_changed": (409, "The daily usage window just changed. Please try again."),
@@ -183,7 +184,8 @@ def denial(result, request_id):
     if isinstance(result, dict) and result.get("allowed") is False and result.get("code") in DENIALS:
         code = result["code"]
         status, message = DENIALS[code]
-        return status, {"error": message, "request_id": request_id, "retryable_attempt": code != "invalid_retry"}
+        return status, {"error": message, "code": code, "request_id": request_id,
+                        "retryable_attempt": code not in {"invalid_retry", "ai_unavailable"}}
     raise ApiError(503, "AI usage limits could not be verified. Please try again.")
 
 
@@ -208,9 +210,13 @@ def settle(request_id, started, generation_attempted, response=None, category=No
 
 def chat(headers, body):
     request_id, retry_of, contents = parse_chat(body)
-    user_id = verified_user_id(headers) if headers.get("Authorization") is not None else None
+    if headers.get("Authorization") is None:
+        return 403, {"code": "ai_unavailable", "error": DENIALS["ai_unavailable"][1]}
+    user_id = verified_user_id(headers)
+    if not paid_pilot_configured():
+        return 503, {"code": "ai_unavailable", "error": "AI chat is unavailable for this deployment."}
     model = configured_model()
-    admission = rpc("mannsathi_ai_reserve", {
+    admission = rpc("mannsathi_ai_pilot_reserve", {
         "p_request_id": request_id, "p_user_id": user_id, "p_retry_of": retry_of,
         "p_model": model, "p_feature": "chat", "p_reserved_tokens": 1})
     denied = denial(admission, request_id)
@@ -226,7 +232,7 @@ def chat(headers, body):
     else:
         try:
             input_count = prompt_token_count(key, model, contents)
-            resized = rpc("mannsathi_ai_resize", {"p_request_id": request_id,
+            resized = rpc("mannsathi_ai_pilot_resize", {"p_request_id": request_id,
                                                  "p_reserved_tokens": input_count + MAX_OUTPUT_TOKENS})
             denied = denial(resized, request_id)
             if denied:
@@ -284,7 +290,17 @@ class handler(BaseHTTPRequestHandler):
         self.send_json(status, payload)
 
     def do_GET(self):
-        self.send_json(405, {"error": "Use POST to send a chat message."})
+        try:
+            available = False
+            if self.headers.get("Authorization") is not None:
+                actor = verified_user_id(self.headers)
+                if paid_pilot_configured():
+                    available = rpc("mannsathi_ai_pilot_eligible", {"p_user_id": actor}) is True
+            self.send_json(200, {"available": available})
+        except ApiError as exc:
+            self.send_json(exc.status, {"error": exc.message})
+        except Exception:
+            self.send_json(503, {"error": "AI chat is temporarily unavailable."})
 
     def log_message(self, format, *args):
         return

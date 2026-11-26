@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
-from api.shared.ai_service import configured_model, rpc, verified_user_id
+from api.shared.ai_service import configured_model, paid_pilot_configured, rpc, session_has_mfa, verified_account
 from api.shared.supabase import ApiError
 from api.shared.validation import instant, local_date
 
@@ -78,6 +78,8 @@ def report_dates(fields, today):
             bad("Choose a supported reporting period.")
     if not 0 <= (end-start).days < 366:
         bad("Choose a date range of up to 366 days.")
+    if start < today - timedelta(days=365):
+        bad("AI reports retain the most recent 366 UTC calendar days. Choose a newer start date.")
     fields.update(start=start.isoformat(), end=end.isoformat())
 
 
@@ -175,6 +177,10 @@ def read_change(request, action):
         elif key == "restricted_until":
             if value is not None:
                 instant(value)
+        elif action == "global" and key in {"requests_per_minute", "daily_token_limit", "monthly_token_limit"} and value is None:
+            bad("Global request and token limits must be finite.")
+        elif key in {"guest_request_limit", "guest_token_limit"} and (type(value) is not int or value != 0):
+            bad("Guest AI is closed for the adult pilot.")
         elif value is not None and (type(value) is not int or not 0 <= value <= 1_000_000_000_000):
             bad("Limits must be whole numbers from 0 to 1,000,000,000,000 or null.")
     if action == "pricing" and "model" not in values:
@@ -203,7 +209,8 @@ def csv_report(data):
 
 def enrich_report(action, actor, result, model):
     if action in {"settings", "provider"}:
-        result.update(configured_model=model, key_configured=bool(os.environ.get("GEMINI_API_KEY", "").strip()))
+        result.update(configured_model=model, key_configured=bool(os.environ.get("GEMINI_API_KEY", "").strip()),
+                      paid_pilot_ready=paid_pilot_configured())
     defaults = {"provider": {"metrics": [], "last_sync": None, "project": None},
                 "billing": {"actual_spend": None, "last_billing_update": None, "billing_through": None, "project": None},
                 "settings": {"provider_monitoring": "unavailable"}}
@@ -262,9 +269,13 @@ def dispatch(request, method):
     try:
         if method not in {"GET", "POST"}:
             raise ApiError(405, "Use GET or POST for AI administration.")
-        actor = verified_user_id(request.headers)
-        if rpc("mannsathi_ai_admin_gate", {"p_admin_id": actor}) is not True:
+        account = verified_account(request.headers)
+        actor = account.user_id
+        if rpc("mannsathi_ai_admin_session", {"p_admin_id": actor}) is not True:
             raise ApiError(403, "Administrator access is required.")
+        if not session_has_mfa(account):
+            return send_response(request, 403, {"error": "Verify a second sign-in factor to open AI administration.",
+                                                "code": "mfa_required"})
         action, filters = query_filters(request.path, method)
         if action == "access":
             return send_response(request, 200, {"admin": True})
