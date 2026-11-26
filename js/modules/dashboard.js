@@ -29,9 +29,9 @@
     }
     function empty(target, heading, copy) { const el = node("li", undefined, "dashboard-empty"); el.append(node("strong", heading), document.createTextNode(copy)); target.append(el); }
     function greeting() {
-        $("dashboard-greeting").textContent = profileName ? "Hello, " + profileName + ". A little progress, every day." : "A little progress, every day";
+        $("dashboard-greeting").textContent = "A little progress, every day" + (profileName ? " · " + profileName : "");
         $("dashboard-heading").textContent = teacher() ? "Class overview" : "My progress";
-        $("dashboard-subheading").textContent = teacher() ? "Your assignments and the exams coming up for your students." : "Your study time, goals and what's coming next.";
+        $("dashboard-subheading").textContent = teacher() ? "Your assignments and the exams coming up for your students" : "Your study time, goals and what's coming next";
         $("dashboard-date").textContent = new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
         panel.classList.toggle("is-teacher", teacher());
         $("dashboard-subject-section").hidden = teacher(); $("dashboard-time-card").hidden = teacher();
@@ -47,7 +47,7 @@
         const subjects = (focus?.subjects || []).filter(subject => !subject.archived);
         if (!subjects.length) {
             const card = node("div", undefined, "dashboard-subject-empty"), copy = node("div"); copy.append(icon("book"));
-            copy.append(node("h3", errors.focus ? "Your study progress is unavailable" : "Your progress starts with one subject."));
+            copy.append(node("h3", errors.focus ? "Your study progress is unavailable" : "Your progress starts with one subject"));
             copy.append(node("p", errors.focus ? "Refresh to load your saved subjects and study time." : "Add a subject in Focus Room, set a weekly goal and watch your effort grow."));
             card.append(copy);
             if (!errors.focus) { const button = node("button", "Open Focus Room", "dashboard-button"); button.type = "button"; button.addEventListener("click", () => context?.role === "student" ? navigate("focus") : location.assign("index.html")); card.append(button); }
@@ -73,7 +73,7 @@
         chart.setAttribute("aria-label", errors.focus ? "Study time unavailable" : "Recorded study time over the last seven days. " + week.map(day => new Date(day.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "short" }) + ": " + minutes(day.seconds) + " minutes").join("; "));
         for (const day of week) {
             const col = node("div", undefined, "dashboard-chart-day"), track = node("div", undefined, "dashboard-chart-track"), bar = node("div", undefined, "dashboard-chart-bar");
-            bar.style.height = (errors.focus ? 0 : day.seconds / max * 100) + "%"; track.append(bar); col.append(track, node("span", dates.parseDate(day.date).toLocaleDateString(undefined, { weekday: "short" }))); col.title = day.date + ": " + minutes(day.seconds) + " min"; chart.append(col);
+            bar.style.height = (errors.focus ? 0 : day.seconds / max * 100) + "%"; track.append(bar); col.append(node("small", errors.focus ? "—" : String(minutes(day.seconds)), "dashboard-chart-value"), track, node("span", dates.parseDate(day.date).toLocaleDateString(undefined, { weekday: "short" }))); col.title = day.date + ": " + minutes(day.seconds) + " min"; chart.append(col);
         }
     }
     function renderTasks() {
@@ -86,7 +86,7 @@
         donut.setAttribute("aria-label", errors.tasks ? "Task progress unavailable" : list.length ? done + " completed, " + started + " in progress, " + pending + " to do" : "No tasks yet");
         const target = $("dashboard-next-list"); target.replaceChildren();
         const next = list.filter(task => !complete(task)).sort((a, b) => (Date.parse(a.due_at) || Infinity) - (Date.parse(b.due_at) || Infinity)).slice(0, 3);
-        if (!next.length) empty(target, errors.tasks ? "Tasks are unavailable" : list.length ? "You're all caught up." : "One small next step.", errors.tasks ? "Refresh to load your current tasks." : list.length ? "Your completed work is saved in Tasks." : "Add your tasks and teacher assignments will appear here too.");
+        if (!next.length) empty(target, errors.tasks ? "Tasks are unavailable" : list.length ? "You're all caught up" : "One small next step", errors.tasks ? "Refresh to load your current tasks." : list.length ? "Your completed work is saved in Tasks." : "Add your tasks and teacher assignments will appear here too.");
         for (const task of next) {
             const row = node("li", undefined, "dashboard-next-item"), button = node("button", undefined, "dashboard-task-action"); button.type = "button"; button.setAttribute("aria-label", "Open tasks for " + task.title); button.append(icon("arrow")); button.addEventListener("click", () => navigate("tasks"));
             const details = node("div", undefined, "dashboard-next-details"); details.append(node("strong", task.title));
@@ -99,10 +99,10 @@
     function renderGoals() {
         const target = $("dashboard-goals-list"); target.replaceChildren();
         const items = teacher() ? (tasks || []).filter(task => task.audience !== "personal").slice(0, 4).map(task => ({ name: task.title, note: number(task.completed_count) + " / " + number(task.recipient_count) + " students completed", value: number(task.recipient_count) ? Math.min(100, Math.round(number(task.completed_count) / number(task.recipient_count) * 100)) : 0, date: task.due_at, task: true })) : (focus?.subjects || []).filter(subject => !subject.archived && number(subject.weekly_goal_minutes) > 0).slice(0, 4).map(subject => ({ name: subject.name, note: minutes(subject.week_seconds) + " / " + number(subject.weekly_goal_minutes) + " min this week", value: Math.min(100, Math.round(number(subject.week_seconds) / (number(subject.weekly_goal_minutes) * 60) * 100)), task: false }));
-        if (!items.length) empty(target, teacher() ? "Assignment progress lives here." : "Give your week a little direction.", teacher() ? "Set an assignment in Tasks to see student completion." : "Set a weekly time goal for a subject in Focus Room.");
+        if (!items.length) empty(target, teacher() ? "Assignment progress lives here" : "Give your week a little direction", teacher() ? "Set an assignment in Tasks to see student completion." : "Set a weekly time goal for a subject in Focus Room.");
         for (const item of items) {
             const row = node("li", undefined, "dashboard-goal"), stamp = node("span", undefined, "dashboard-goal-date"), date = item.date && Number.isFinite(Date.parse(item.date)) ? new Date(item.date) : null;
-            stamp.append(node("strong", date ? String(date.getDate()) : item.task ? "✓" : "7"), node("small", date ? date.toLocaleDateString(undefined, { month: "short" }) : item.task ? "TASK" : "DAYS"));
+            stamp.append(date ? node("strong", String(date.getDate())) : icon(item.task ? "list" : "book"), node("small", date ? date.toLocaleDateString(undefined, { month: "short" }) : item.task ? "Task" : "Week"));
             const details = node("div", undefined, "dashboard-goal-details"), progress = node("div", undefined, "dashboard-goal-progress"), bar = node("progress"); bar.max = 100; bar.value = item.value; bar.setAttribute("aria-label", item.name + ": " + item.note); progress.append(bar, node("span", item.value + "%"));
             details.append(node("strong", item.name), node("p", item.note), progress); row.append(stamp, details); target.append(row);
         }
